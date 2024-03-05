@@ -1,0 +1,121 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+mover
+{
+    
+    type                multiValveEngine;
+
+    libs                ("libfvMeshMoversMultiValveEngine.so");
+
+    slidingPatches      
+    (
+        ncc_iv_cyl 
+        ncc_cyl_iv 
+        ncc_ev_cyl 
+        ncc_cyl_ev 
+        iv_stem 
+        ev_stem 
+        liner
+    );    
+
+    linerPatches        (liner);
+
+    piston
+    {
+        patches             (piston);
+        axis                (0 0 1);
+
+        motion
+        {
+            type            crankConnectingRodMotion;
+            conRodLength    0.231;
+            stroke          0.086;
+        }  
+
+        // Move the points in the piston bowl with the piston
+        movingZones         (pistonBowl);
+
+        // Freeze the points in the cylinder head
+        frozenZones         (cylinderHead);
+
+        fractionalTravelInterval 0.05;
+
+        cosineScaling       yes;
+        movingFrozenLayerThickness   1e-4;
+
+    }
+    valves
+    {
+
+        intakeValve
+        {
+            patches            (iv_head);
+	        axis (0 0 1);
+
+            
+            movingFrozenLayerThickness   1e-4;
+
+            maxMotionDistance   0.05;
+
+            fractionalTravelInterval 0.05;
+
+            minLift     0.000450;
+
+            motion
+            {                
+                type    table;
+                values
+                (
+                    #include "$FOAM_CASE/constant/intake.txt"
+                );
+                // For multi-cycle simulations, use repeat
+                outOfBounds     repeat;
+                interpolationScheme linear;
+            }
+        }
+        exhaustValve
+        {
+            $intakeValve;
+            patches            (ev_head);
+
+            motion
+            {
+                type    tableFile;
+                format  csv;
+                file    "$FOAM_CASE/constant/exhaust.txt";
+                nHeaderLine 2;
+                refColumn   0;
+                separator           " ";
+                componentColumns    (1);
+                mergeSeparators     yes;
+                outOfBounds     repeat;
+                interpolationScheme linear;
+            }
+        }
+    };
+
+}
+
+topoChanger
+{
+    type            meshToMesh;
+    libs            ( "libmeshToMeshTopoChanger.so" );
+    times           ( #include "${FOAM_CASE}/constant/meshTimes" );
+    repeat  720;
+    timeDelta 1e-06;
+}
+// ************************************************************************* //

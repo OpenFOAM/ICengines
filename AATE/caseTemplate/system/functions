@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      functions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#includeFunc    multiValveEngineState
+#includeFunc    checkMesh(executeControl=adjustableRunTime, executeInterval=1)
+//#includeFunc    scalarTransport(tracer)
+#includeFunc    cutPlanes
+#includeFunc    time(name=cpuTime, perTimeStep=yes)
+#includeFunc    timeStep
+#includeFunc    CourantNo(executeControl=timeStep, executeInterval=1, executeAtStart=false)
+#includeFunc cellMax
+(
+    name=maxCo,
+    fields=(Co)
+)
+#includeFunc volAverage
+(
+    name=pTAvg_chamber,
+    fields=(p T),
+    select=cellZone,
+    cellZone=combustionChamber
+)
+#includeFunc cellMax
+(
+    name=pTMax_chamber,
+    fields=(p T),
+    select=cellZone,
+    cellZone=combustionChamber
+)
+#includeFunc cellMin
+(
+    name=pTMin_chamber,
+    fields=(p T),
+    select=cellZone,
+    cellZone=combustionChamber
+)
+#includeFunc stopAtTimeStep(minDeltaT=1e-12, action=writeNow)
+fluidMaxDeltaT
+{
+    type            fluidMaxDeltaT;
+    maxCo
+    {
+        type            table;
+        values          
+        ( 
+            ( 0 3 ) 
+            ( 128.74 10 ) 
+            ( 357.74 5 ) 
+            ( 594.47 3 ) 
+            ( 720 3 ) 
+        );
+        interpolationScheme step;
+        outOfBounds     repeat;
+    }
+    maxDeltaT
+    {
+        type            table;
+        values          
+        ( 
+            ( 0 0.1 ) 
+            ( 128 0.01 ) 
+            ( 150 0.1 ) 
+            ( 357.74 0.01 ) 
+            ( 362.74 0.1 ) 
+            ( 365.74 0.01 ) 
+            ( 370.74 0.1 ) 
+            ( 594.47 0.01 ) 
+            ( 600 0.1 ) 
+            ( 720 0.1 ) 
+        );
+        interpolationScheme step;
+        outOfBounds     repeat;
+    }
+}
+// ************************************************************************* //

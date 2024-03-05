@@ -1,0 +1,53 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0];
+
+internalField   uniform 330;
+
+boundaryField
+{
+    "(exhaustport|ev.*|iv.*|intakeport|piston|cylinderhead|liner|sparkplug)"
+    {
+        type          fixedValue;
+        value         uniform 310.66;
+    }
+
+
+    inlet
+    {
+        type          inletOutlet;
+        inletValue    uniform 317.68;
+        value         uniform 317.68;
+    }
+
+    outlet
+    {
+        type          inletOutlet;
+        inletValue    uniform 314.7;
+        value         uniform 314.7;
+    }
+    
+    // for the NCC case
+    #includeEtc "caseDicts/setConstraintTypes"
+    "ncc.*"
+    {
+        type            zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //

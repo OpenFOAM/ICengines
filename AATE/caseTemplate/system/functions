@@ -16,7 +16,7 @@ FoamFile
 
 #includeFunc    multiValveEngineState
 #includeFunc    checkMesh(executeControl=adjustableRunTime, executeInterval=1)
-//#includeFunc    scalarTransport(tracer)
+#includeFunc    scalarTransport(tracer)
 #includeFunc    cutPlanes
 #includeFunc    time(name=cpuTime, perTimeStep=yes)
 #includeFunc    timeStep

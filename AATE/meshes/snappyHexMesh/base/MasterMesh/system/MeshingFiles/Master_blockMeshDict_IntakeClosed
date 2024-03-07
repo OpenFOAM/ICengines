@@ -1,0 +1,160 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |				
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  9                                   	
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+convertToMeters 0.001;
+
+xmin -60;
+xmid1 7;
+xmax  60;
+
+ymin -110;
+ymax  110;
+
+zmin -110;
+zmid 1.0;
+zmax 85;
+
+dx	2.1;
+dy	2.1;
+dz	2.1;
+
+xcells #calc "ceil((($xmid1)-($xmin))/$dx)";
+x1cells #calc "ceil((($xmax)-($xmid1))/$dx)";
+
+ycells #calc "ceil((($ymax)-($ymin))/$dy)";
+
+zcells #calc "ceil((($zmid)-($zmin))/$dz)";
+z1cells #calc "ceil((($zmax)-($zmid))/$dz)";
+
+vertices        
+(
+    ($xmin  $ymin  $zmin)	//0
+    ($xmid1  $ymin  $zmin)	//1
+    ($xmid1  $ymin  $zmid)	//2
+    ($xmin  $ymin  $zmid)	//3
+    
+    ($xmax  $ymin  $zmin)	//4
+    ($xmax  $ymin  $zmid)	//5
+    
+    ($xmid1  $ymin  $zmax)	//6
+    ($xmin  $ymin  $zmax)	//7
+    
+    
+    ($xmin  $ymax  $zmin)	//8
+    ($xmid1  $ymax  $zmin)	//9
+    ($xmid1  $ymax  $zmid)	//10
+    ($xmin  $ymax  $zmid)	//11
+    
+    ($xmax  $ymax  $zmin)	//12
+    ($xmax  $ymax  $zmid)	//13
+    
+    ($xmid1  $ymax  $zmax)	//14
+    ($xmin  $ymax  $zmax)	//15
+
+);
+
+blocks          
+(
+    hex (0 3 2 1 8 11 10 9)  ($zcells $xcells $ycells) simpleGrading (1 1 1)		//left
+    hex (1 2 5 4 9 10 13 12) ($zcells $x1cells $ycells) simpleGrading (1 1 1)		//middlebottom
+    hex (3 7 6 2 11 15 14 10) ($z1cells $xcells $ycells) simpleGrading (1 1 1)  		  
+	
+);
+
+edges           
+(
+);
+
+
+boundary        
+(
+    minX
+    {
+        type patch;
+	faces
+	( 
+            (0 3 11 8)
+            (3 7 15 11)
+	);
+    }
+
+    maxX
+    {
+        type patch;
+	faces
+	( 
+            (4 5 13 12)
+            (2 6 14 10)
+	);
+    }
+
+    minY
+    {
+        type patch;
+	faces
+	( 
+            (0 1 2 3)
+            (1 4 5 2)
+            (2 6 7 3)
+	);
+    }
+
+    maxY 
+    {
+        type patch;
+	faces
+	( 
+            (8 9 10 11)
+            (9 12 13 10)
+            (10 14 15 11)
+	);
+    }
+
+    minZ
+    {
+        type patch;
+	faces
+	( 
+	    
+            (0 1 9 8)
+            (1 4 12 9)
+	);
+    }
+
+    maxZ
+    {
+        type patch;
+	faces
+	( 
+            (7 6 14 15)
+	);
+    }
+
+    IntakePort.maxZ
+    {
+        type wall;
+	faces
+	( 
+            (2 5 13 10)
+	);
+    }
+
+);
+
+mergePatchPairs 
+(
+);
+
+// ************************************************************************* //

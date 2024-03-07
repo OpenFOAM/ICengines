@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      createPatchDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+pointSync   false;
+
+patches
+(
+    {
+        name    iv_head;
+        patchInfo
+        {
+            type    wall;
+        }
+        constructFrom patches;
+        patches     ("IntakeValveHead.*" "iv_head.*" );
+    }
+    {
+        name    ev_head;
+        patchInfo
+        {
+            type    wall;
+        }
+        constructFrom patches;
+        patches     ("ExhaustValveHead.*" "ev_head.*" );
+    }
+    {
+        name    intakeport;
+        patchInfo
+        {
+            type    wall;
+        }
+        constructFrom patches;
+        patches     ("intakeport.*" "IntakePort.*" );
+    }
+    {
+        name    exhaustport;
+        patchInfo
+        {
+            type    wall;
+        }
+        constructFrom patches;
+        patches     ("exhaustport.*" "ExhaustPort.*" );
+    }
+
+);
+
+// ************************************************************************* //

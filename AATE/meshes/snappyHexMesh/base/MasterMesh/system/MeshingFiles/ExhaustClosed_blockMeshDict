@@ -1,0 +1,120 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |				
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  9                                   	
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+convertToMeters 0.001;
+
+xmin -60;
+xmax  -7;
+ymin -20;
+ymax  110;
+zmin  2.6;
+zmax  85;
+
+dx	2.1;
+dy	2.1;
+dz	2.1;
+
+xcells #calc "ceil((($xmax)-($xmin))/$dx)";
+ycells #calc "ceil((($ymax)-($ymin))/$dy)";
+zcells #calc "ceil((($zmax)-($zmin))/$dz)";
+
+
+vertices        
+(
+    ($xmin  $ymin  $zmin)
+    ($xmax  $ymin  $zmin)
+    ($xmax  $ymax  $zmin)
+    ($xmin  $ymax  $zmin)
+    ($xmin  $ymin  $zmax)
+    ($xmax  $ymin  $zmax)
+    ($xmax  $ymax  $zmax)
+    ($xmin  $ymax  $zmax)
+);
+
+blocks          
+(
+    hex (0 1 2 3 4 5 6 7) ($xcells $ycells $zcells) 
+	simpleGrading (1 1 1)
+
+);
+
+edges           
+(
+);
+
+
+boundary        
+(
+    minX
+    {
+        type patch;
+	faces
+	( 
+            (0 4 7 3)
+	);
+    }
+
+    maxX
+    {
+        type patch;
+	faces
+	( 
+            (2 6 5 1)
+	);
+    }
+
+    minY
+    {
+        type patch;
+	faces
+	( 
+            (1 5 4 0)
+	);
+    }
+
+    maxY 
+    {
+        type patch;
+	faces
+	( 
+            (3 7 6 2)
+	);
+    }
+
+    ExhaustPort.minZ
+    {
+        type wall;
+	faces
+	( 
+            (0 3 2 1)
+	);
+    }
+
+    ExhaustPort.maxZ
+    {
+        type wall;
+	faces
+	( 
+            (4 5 6 7)
+	);
+    }
+
+);
+
+mergePatchPairs 
+(
+);
+
+// ************************************************************************* //

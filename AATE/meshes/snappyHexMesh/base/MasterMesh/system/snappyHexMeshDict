@@ -1,0 +1,371 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format          ascii;
+    class           dictionary;
+    object          snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+castellatedMesh true;
+
+snap            true;
+
+addLayers       true;
+
+geometry
+{
+    cylinderhead
+    {
+        type            triSurfaceMesh;
+        file            "CylinderHead.stl";
+    }
+    liner
+    {
+        type            triSurfaceMesh;
+        file            "CylinderLiner.stl";
+    }
+    inlet
+    {
+        type            triSurfaceMesh;
+        file            "Inlet.stl";
+    }
+    outlet
+    {
+        type            triSurfaceMesh;
+        file            "Outlet.stl";
+    }
+    piston
+    {
+        type            triSurfaceMesh;
+        file            "Piston.stl";
+    }
+    CreviceRefinement
+    {
+        type            triSurfaceMesh;
+        file            "CreviceRefinement.stl";
+    }
+    intakeport
+    {
+        type            triSurfaceMesh;
+        file            "IntakePort.stl";
+    }
+    iv_head
+    {
+        type            triSurfaceMesh;
+        file            "IntakeValveHead.stl";
+    }
+    IntakeValveHeadRefinement
+    {
+        type            triSurfaceMesh;
+        file            "IntakeValveHeadRefinement.stl";
+    }
+    iv_stem
+    {
+        type            triSurfaceMesh;
+        file            "IntakeValveStem.stl";
+    }
+    exhaustport
+    {
+        type            triSurfaceMesh;
+        file            "ExhaustPort.stl";
+    }
+    ev_head
+    {
+        type            triSurfaceMesh;
+        file            "ExhaustValveHead.stl";
+    }
+    ev_stem
+    {
+        type            triSurfaceMesh;
+        file            "ExhaustValveStem.stl";
+    }
+    ExhaustValveHeadRefinement
+    {
+        type            triSurfaceMesh;
+        file            "ExhaustValveHeadRefinement.stl";
+    }
+    sparkplug
+    {
+        type            triSurfaceMesh;
+        file            "SparkPlug.stl";
+    }
+    InletPatchRefinementBox
+    {
+        type            searchableCylinder;
+        point1          ( 0.025 -0.11 0.063 );
+        point2          ( 0.025 -0.095 0.063 );
+        radius          0.016;
+    }
+    OutletPatchRefinementBox
+    {
+        type            searchableCylinder;
+        point1          ( -0.025 0.11 0.063 );
+        point2          ( -0.025 0.095 0.063 );
+        radius          0.016;
+    }
+    refinementsphere1
+    {
+        type            searchableSphere;
+        centre          ( 0.028 0.003 0.043 );
+        radius          0.004;
+    }
+    refinementsphere2
+    {
+        type            searchableSphere;
+        centre          ( -0.028 -0.003 0.043 );
+        radius          0.004;
+    }
+}
+
+castellatedMeshControls
+{
+    insidePoints    ( 0 0 0 );
+    maxLocalCells   10000000;
+    maxGlobalCells  10000000;
+    minRefinementCells 0;
+    maxLoadUnbalance 0.2;
+    nCellsBetweenLevels 2;
+    features        ( );
+    refinementSurfaces
+    {
+        cylinderhead
+        {
+            level           ( 2 2 );
+        }
+        liner
+        {
+            level           ( 2 2 );
+            //gapLevelIncrement 2;
+        }
+        inlet
+        {
+            level           ( 2 2 );
+        }
+        outlet
+        {
+            level           ( 2 2 );
+        }
+        piston
+        {
+            level           ( 1 3 );
+            //gapLevelIncrement 1;
+        }
+        intakeport
+        {
+            level           ( 2 3 );
+        }
+        iv_head
+        {
+            level           ( 2 2 );
+        }
+        IntakeValveHeadRefinement
+        {
+            level           ( 2 2 );
+        }
+        iv_stem
+        {
+            level           ( 2 2 );
+        }
+        exhaustport
+        {
+            level           ( 2 3 );
+        }
+        ev_stem
+        {
+            level           ( 2 2 );
+        }
+        ev_head
+        {
+            level           ( 2 2 );
+        }
+        ExhaustValveHeadRefinement
+        {
+            level           ( 2 2 );
+        }
+        sparkplug
+        {
+            level           ( 2 2 );
+        }
+    }
+    resolveFeatureAngle 25;
+    planarAngle     25;
+    refinementRegions
+    {
+        IntakeValveHeadRefinement
+        {
+            mode            distance;
+            levels          ( ( 0.00045 4 ) ( 0.001 2 ) ( 0.007 1 ) );
+        }
+        ExhaustValveHeadRefinement
+        {
+            mode            distance;
+            levels          ( ( 0.00045 4 ) ( 0.001 2 ) ( 0.007 1 ) );
+        }
+        iv_head
+        {
+            mode            distance;
+            levels          ( ( 0.00045 4 ) ( 0.001 2 ) ( 0.007 1 ) );
+        }
+        ev_head
+        {
+            mode            distance;
+            levels          ( ( 0.00045 4 ) ( 0.001 2 ) ( 0.007 1 ) );
+        }
+        InletPatchRefinementBox
+        {
+            mode            inside;
+            levels          ( ( 1 1 ) );
+        }
+        OutletPatchRefinementBox
+        {
+            mode            inside;
+            levels          ( ( 1 1 ) );
+        }
+        refinementsphere1
+        {
+            mode            inside;
+            levels          ( ( 2 4 ) );
+        }
+        refinementsphere2
+        {
+            mode            inside;
+            levels          ( ( 2 4 ) );
+        }
+        liner
+        {
+            mode            distance;
+            levels          ( ( 0.046 1 ) );
+        }
+        
+        CreviceRefinement
+        {
+            mode            inside;
+            levels          ( ( 4 4 ) );
+        }
+        
+    }
+    allowFreeStandingZoneFaces false;
+    extendedRefinementSpan true;
+}
+
+snapControls
+{
+    nSmoothPatch    1;
+    nSmoothInternal 15;
+    tolerance       2;
+    nSolveIter      100;
+    nRelaxIter      10;
+    nFeatureSnapIter 10;
+    implicitFeatureSnap true;
+    explicitFeatureSnap false;
+    multiRegionFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes   true;
+    expansionRatio  1.5;
+    thickness       0.8;
+    minThickness    0.2;
+    layers
+    {
+        cylinderhead
+        {
+            nSurfaceLayers  1;
+        }
+        intakeport
+        {
+            nSurfaceLayers  1;
+        }
+        exhaustport
+        {
+            nSurfaceLayers  1;
+        }
+        liner
+        {
+            nSurfaceLayers  1;
+        }
+        iv_head
+        {
+            nSurfaceLayers  1;
+        }
+        IntakeValveHeadRefinement
+        {
+            nSurfaceLayers  1;
+        }
+        iv_stem
+        {
+            nSurfaceLayers  1;
+        }
+        ev_head
+        {
+            nSurfaceLayers  1;
+        }
+        ExhaustValveHeadRefinement
+        {
+            nSurfaceLayers  1;
+        }
+        ev_stem
+        {
+            nSurfaceLayers  1;
+        }
+        piston
+        {
+            nSurfaceLayers  0;
+        }
+        sparkplug
+        {
+            nSurfaceLayers  1;
+        }
+    }
+    nGrow           0;
+    featureAngle    330;
+    maxFaceThicknessRatio 0.7;
+    nSmoothSurfaceNormals 5;
+    nSmoothThickness 10;
+    minMedialAxisAngle 90;
+    nMediaAxisIter  10;
+    minMedianAxisAngle 90;
+    maxThicknessToMedialRatio 0.3;
+    nSmoothNormals  10;
+    nRelaxIter      5;
+    nBufferCellsNoExtrude 0;
+    nLayerIter      30;
+    nRelaxedIter    10;
+}
+
+meshQualityControls
+{
+    maxNonOrtho     65;
+    maxBoundarySkewness 4;
+    maxInternalSkewness 4;
+    maxConcave      75;
+    minVol          1e-15;
+    minTetQuality   1e-15;
+    minArea         -1;
+    minTwist        -0.05;
+    minDeterminant  0.001;
+    minFaceWeight   0.02;
+    minVolRatio     0.01;
+    minTriangleTwist -1;
+    relaxed
+    {
+        maxNonOrtho     70;
+    }
+    nSmoothScale    5;
+    errorReduction  0.55;
+}
+
+debugFlags      ( );
+
+mergeTolerance  1e-06;
+
+
+// ************************************************************************* //

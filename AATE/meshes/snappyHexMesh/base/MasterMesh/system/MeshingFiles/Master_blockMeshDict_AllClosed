@@ -1,0 +1,186 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |				
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  9                                   	
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+convertToMeters 0.001;
+
+xmin -60;
+xmid1 -7;
+xmid2  7;
+xmax  60;
+
+ymin -60;
+ymax  60;
+
+zmin -110;
+zmid 1.0;
+zmax 10;
+
+dx	2.1;
+dy	2.1;
+dz	2.1;
+
+xcells #calc "ceil((($xmid1)-($xmin))/$dx)";
+x1cells #calc "ceil((($xmid2)-($xmid1))/$dx)";
+x2cells #calc "ceil((($xmax)-($xmid2))/$dx)";
+
+ycells #calc "ceil((($ymax)-($ymin))/$dy)";
+
+zcells #calc "ceil((($zmid)-($zmin))/$dz)";
+z1cells #calc "ceil((($zmax)-($zmid))/$dz)";
+
+
+vertices        
+(
+    ($xmin  $ymin  $zmin)	//0
+    ($xmid1  $ymin  $zmin)	//1
+    ($xmid1  $ymin  $zmid)	//2
+    ($xmin  $ymin  $zmid)	//3
+    
+//  ($xmid1  $ymin  $zmin)	//1    
+    ($xmid2  $ymin  $zmin)	//4
+    ($xmid2  $ymin  $zmax)	//5
+    ($xmid1  $ymin  $zmax)	//6
+    
+//  ($xmid2  $ymin  $zmin)	//4               	
+    ($xmax  $ymin  $zmin)	//7
+    ($xmax  $ymin  $zmid)	//8
+    ($xmid2  $ymin  $zmid)	//9
+            
+    ($xmin  $ymax  $zmin)	//10
+    ($xmid1  $ymax  $zmin)	//11
+    ($xmid1  $ymax  $zmid)	//12
+    ($xmin  $ymax $zmid)	//13
+    
+//  ($xmid1  $ymax  $zmin)	//11    
+    ($xmid2  $ymax  $zmin)	//14
+    ($xmid2  $ymax  $zmax)	//15
+    ($xmid1  $ymax  $zmax)	//16
+    
+//  ($xmid2  $ymax  $zmin)	//14               	
+    ($xmax  $ymax  $zmin)	//17
+    ($xmax  $ymax  $zmid)	//18
+    ($xmid2  $ymax  $zmid)	//19
+);
+
+blocks          
+(
+    hex (0 3 2 1 10 13 12 11) ($zcells $xcells  $ycells) simpleGrading (1 1 1)		//left
+    hex (1 2 9 4 11 12 19 14) ($zcells $x1cells $ycells) simpleGrading (1 1 1)	//middlebottom
+    hex (4 9 8 7 14 19 18 17) ($zcells $x2cells  $ycells) simpleGrading (1 1 1)  	//right	  
+    hex (2 6 5 9 12 16 15 19) ($z1cells $x1cells  $ycells) simpleGrading (1 1 1)  	//top
+);
+
+edges           
+(
+);
+
+
+boundary        
+(
+    minX
+    {
+        type patch;
+	faces
+	( 
+            (0 3 13 10)
+	);
+    }
+
+    maxX
+    {
+        type patch;
+	faces
+	( 
+            (7 8 18 17)
+	);
+    }
+
+    minY
+    {
+        type patch;
+	faces
+	( 
+            (0 1 2 3)
+            (1 4 9 2)
+            (4 7 8 9)
+            (2 9 5 6)
+	);
+    }
+
+    maxY 
+    {
+        type patch;
+	faces
+	( 
+            (10 11 12 13)
+            (11 14 19 12)
+            (14 17 18 19)
+            (12 19 15 16)
+	);
+    }
+
+    minZ
+    {
+        type wall;
+	faces
+	( 
+            (0 1 11 10)
+            (1 4 14 11)
+            (4 7 17 14)
+	);
+    }
+
+    maxZ
+    {
+        type wall;
+	faces
+	( 
+          
+            (2 6 16 12)
+            (6 5 15 16)
+            (5 9 19 15)
+          
+	);
+    }
+
+    IntakePort.maxZ
+    {
+        type wall;
+	faces
+	( 
+           
+            (9 8 18 19)
+         
+	);
+    }
+    
+       ExhaustPort.maxZ
+    {
+        type wall;
+	faces
+	( 
+            (3 2 12 13)
+          
+         
+	);
+    }
+
+);
+
+mergePatchPairs 
+(
+);
+
+// ************************************************************************* //

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# This script can be run as a job script in a computing cluster
+# Insert your job submission script here
+
+# 1. Source OpenFOAM
+# 2. Set the NSLOTS to number of processors
+# 3. Tell the job scheduler to run from current directory
+
+if [ -z "$NSLOTS" ]; then
+    NSLOTS=36
+fi
+
+# Check if WM_PROJECT_DIR exists
+if [ ! -d "$WM_PROJECT_DIR" ]; then
+    echo "Error: OpenFOAM is not installed or sourced."
+    exit 1
+fi
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+runApplication -o foamCloneCase -add 0.orig caseTemplate snappyCase
+
+source_dir="meshes/snappyHexMesh/snappyMeshes"
+if [ ! -d "$source_dir" ] || [ "$(find "$source_dir" -maxdepth 1 -type f -name 'meshTo*' | wc -l)" -eq 0 ]; then
+    echo "Error: Source directory '$source_dir' either does not exist or no meshToMesh_* subdirectories are found."
+    exit 1
+fi
+
+cp -r meshes/snappyHexMesh/snappyMeshes/meshTo* snappyCase/constant
+
+cd snappyCase/
+
+# Copy the start time mesh
+cp -r constant/meshToMesh_0/polyMesh constant/
+cp -r 0.orig 0
+
+
+# create a meshTimes file that includes the mapping instances
+# for the meshToMesh topoChanger
+ls -d constant/meshToMesh_* | sed 's/.*meshToMesh_//' \
+    | sort -n > constant/meshTimes
+
+foamDictionary  system/decomposeParDict  -entry numberOfSubdomains -set $NSLOTS
+
+runApplication decomposePar
+
+# Decompose all the meshToMesh instances. Code block below would loop over all mesh instances, and decompose them
+# in serial. You can have two different alternatives:
+# 1- Modify the for loop to submit decompose commands in batches, and run them in the background with &, so they run concurrently.
+# 2- Use gnu-parallel. Example usage: cat constant/meshTimes | parallel  --memfree 1G -j 10 decomposePar -region meshToMesh_{}
+for meshDir in constant/meshToMesh_*; do
+    # Extract mapTime from the directory name
+    mapTime=$(basename "$meshDir")
+    # Run the command with the extracted mapTime
+    runApplication -a decomposePar -region "$mapTime"
+done
+
+runParallel $(getApplication)
+#------------------------------------------------------------------------------

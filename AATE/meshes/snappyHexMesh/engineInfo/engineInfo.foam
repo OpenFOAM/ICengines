@@ -11,19 +11,19 @@ engine
 }
 valves
 {
-    
+
     intakeValve
     {
-        unit mm;
+        unit m;
         origin  (0 -28 0);
         axis    (0 0 1);
         minGap  0.00045;
     }
-    
+
 
     exhaustValve
     {
-        unit mm;
+        unit m;
         origin  (0 28 0);
         axis    (0 0 1);
         minGap  0.00045;

@@ -5,7 +5,7 @@ AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework designed for conducting ind
 
 ## Prerequisites
 Before using AATE, make sure you have the following installed:
-- OpenFOAM (OpenFOAM-dev from version 6.3.2024 onwards is required)
+- OpenFOAM-dev dated 20240306 or newer.
 
 ## Case Setup: TCC-III Engine
 

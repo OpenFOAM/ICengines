@@ -9,7 +9,6 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-# Validate argument
 if [ "$1" != "coarse" ] && [ "$1" != "fine" ]; then
     echo "Error: Argument must be 'coarse' or 'fine'"
     exit 1
@@ -26,19 +25,9 @@ fi
 
 times="$(cat meshTimes_$MESH_TYPE | xargs)"
 
-for t in $times
-do
-    # Check if the directory exists
-    if [ -d "$MESH_TYPE/meshToMesh_$t/polyMesh" ]; then
-        continue
-    else
-        # Check if the $MESH_TYPE directory exists
-        if [ ! -d "$MESH_TYPE" ]; then
-            echo -e "\e[32mCreating directory $MESH_TYPE\e[0m"
-            mkdir -p $MESH_TYPE
-        fi
-        curl "$domain/$MESH_TYPE/meshToMesh_$t.txz" | tar xJf - -C $MESH_TYPE/
-    fi
+for t in $times; do
+    pack="$MESH_TYPE/meshToMesh_$t"
+    [ ! -d "$pack/polyMesh" ] && mkdir -p "$MESH_TYPE" && curl "$domain/$MESH_TYPE/meshToMesh_$t.txz" | tar xJf - -C "$MESH_TYPE/"
 done
 
 echo -e "\e[32m$MESH_TYPE GridPro meshes are ready for use.\e[0m"

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script download the pre-generated GridPro meshes to your hard drive.
 # Usage: ./downloadMeshes [coarse|fine]
@@ -16,6 +17,12 @@ fi
 
 MESH_TYPE="$1"
 domain=https://s3.eu-west-1.amazonaws.com/dl.openfoam.org/ICengines/TCC-III
+
+# Check if the meshTimes_$MESH_TYPE file exists
+if [ ! -f "meshTimes_$MESH_TYPE" ]; then
+    echo "Error: meshTimes_$MESH_TYPE file not found."
+    exit 1
+fi
 
 times="$(cat meshTimes_$MESH_TYPE | xargs)"
 

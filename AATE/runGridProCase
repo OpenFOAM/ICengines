@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script can be run as a job script in a computing cluster
 # Insert your job submission script here
@@ -35,17 +36,23 @@ fi
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
 # Clone case and prepare
-runApplication -o foamCloneCase -add 0.orig caseTemplate gridProCase_$MESH_TYPE
+runApplication -o -s $MESH_TYPE foamCloneCase -add 0.orig caseTemplate gridProCase_$MESH_TYPE
 cd gridProCase_$MESH_TYPE/
-
 cp -r ../meshes/GridPro/$MESH_TYPE/meshToMesh_* constant/
+cp -r ../meshes/GridPro/meshTimes_$MESH_TYPE constant/meshTimes
+
+# Check if each meshToMesh_x folder exists for each mesh mapping instance in meshTimes
+awk '{print $1}' constant/meshTimes | while read -r map; do
+    if [ ! -d "constant/meshToMesh_$map" ]; then
+        echo "Error: Folder meshToMesh_$map does not exist for mesh instance $map in meshTimes_$MESH_TYPE"
+        exit 1
+    fi
+done
+
 
 # Copy start time mesh and initial conditions
 cp -r constant/meshToMesh_0/polyMesh constant/
 cp -r 0.orig 0
-
-# Create meshTimes file
-ls -d constant/meshToMesh_* | sed 's/.*meshToMesh_//' | sort -n > constant/meshTimes
 
 # Set number of subdomains
 foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS

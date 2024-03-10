@@ -1,0 +1,28 @@
+# Corefiles
+core
+
+# Build directories - anywhere
+linux*Clang*/
+linux*Gcc*/
+linux*Icc*/
+solaris*Gcc*/
+SunOS*Gcc*/
+platforms/
+
+# Source packages - anywhere
+*.tar.bz2
+*.tar.gz
+*.tar
+*.tgz
+*.txz
+*.tgz
+
+# Ignore cloned case setups
+gridProCase*/
+
+# Ignore downloaded meshes
+coarse/
+fine/
+
+# Ignore log files
+log.*

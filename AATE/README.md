@@ -38,3 +38,9 @@ Please note: `<coarse|fine>` represents the desired mesh resolution. Choose the 
 1. **SnappyHexMesh-based Mesh Generation Routines**: AATE will soon provide `snappyHexMesh`-based mesh generation routines, offering users an alternative method for generating meshes tailored to their simulation needs. Stay tuned for updates on this feature.
 
 2. **Python-based Pre- and Post-Processing Routines**: AATE will introduce `python`-based pre- and post-processing routines specifically designed for engine simulations. These routines will enhance the flexibility and customization options available to users during both the setup and analysis phases of their simulations.
+
+## Links and References
+
+- The TCC-III simulation setup provided in this repository originates from the master thesis work of Mr. Bishal Shrestha, from Aalto University Finland.
+    - [Link to thesis](https://aaltodoc.aalto.fi/items/72c50f37-f365-47c1-9c28-ba54a1c337d8)
+    - [Simulation video](https://youtu.be/EKZjcYNGCfg?si=3mqDxk1PTpv0U61P)

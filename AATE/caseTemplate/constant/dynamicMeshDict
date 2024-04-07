@@ -16,21 +16,21 @@ FoamFile
 
 mover
 {
-    
+
     type                multiValveEngine;
 
     libs                ("libfvMeshMoversMultiValveEngine.so");
 
-    slidingPatches      
+    slidingPatches
     (
-        ncc_iv_cyl 
-        ncc_cyl_iv 
-        ncc_ev_cyl 
-        ncc_cyl_ev 
-        iv_stem 
-        ev_stem 
+        ncc_iv_cyl
+        ncc_cyl_iv
+        ncc_ev_cyl
+        ncc_cyl_ev
+        iv_stem
+        ev_stem
         liner
-    );    
+    );
 
     linerPatches        (liner);
 
@@ -44,7 +44,7 @@ mover
             type            crankConnectingRodMotion;
             conRodLength    0.231;
             stroke          0.086;
-        }  
+        }
 
         // Move the points in the piston bowl with the piston
         movingZones         (pistonBowl);
@@ -64,19 +64,19 @@ mover
         intakeValve
         {
             patches            (iv_head);
-	        axis (0 0 1);
+            axis (0 0 1);
 
-            
+
             movingFrozenLayerThickness   1e-4;
 
             maxMotionDistance   0.05;
 
             fractionalTravelInterval 0.05;
 
-            minLift     0.000450;
+            minLift     0.0002;
 
             motion
-            {                
+            {
                 type    table;
                 values
                 (
@@ -90,20 +90,25 @@ mover
         exhaustValve
         {
             $intakeValve;
-            patches            (ev_head);
+            patches (ev_head);
 
             motion
             {
-                type    tableFile;
-                format  csv;
-                file    "$FOAM_CASE/constant/exhaust.txt";
-                nHeaderLine 2;
-                refColumn   0;
-                separator           " ";
-                componentColumns    (1);
-                mergeSeparators     yes;
-                outOfBounds     repeat;
-                interpolationScheme linear;
+                type            scale;
+                value           0.001;  // Scale the exhaust.txt from mm to m
+                scale
+                {
+                    type    tableFile;
+                    format  csv;
+                    file    "$FOAM_CASE/constant/exhaust.txt";
+                    nHeaderLine 2;
+                    refColumn   0;
+                    separator   " ";
+                    componentColumns    ( 1 );
+                    mergeSeparators yes;
+                    outOfBounds     repeat;
+                    interpolationScheme linear;
+                }
             }
         }
     };

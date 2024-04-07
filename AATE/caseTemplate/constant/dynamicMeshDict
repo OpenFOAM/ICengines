@@ -52,7 +52,7 @@ mover
         // Freeze the points in the cylinder head
         frozenZones         (cylinderHead);
 
-        fractionalTravelInterval 0.05;
+        travelInterval #calc "$motion/stroke * 0.05";
 
         cosineScaling       yes;
         movingFrozenLayerThickness   1e-4;
@@ -71,7 +71,7 @@ mover
 
             maxMotionDistance   0.05;
 
-            fractionalTravelInterval 0.05;
+            travelInterval 0.0005;
 
             minLift     0.0002;
 

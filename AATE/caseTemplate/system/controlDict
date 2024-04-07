@@ -52,7 +52,7 @@ adjustTimeStep  yes;
 
 maxCo           10;
 
-maxDeltaT       0.2;
+maxDeltaT       0.5;
 
 userTime
 {

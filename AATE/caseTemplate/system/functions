@@ -15,7 +15,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #includeFunc    multiValveEngineState
-#includeFunc    checkMesh(executeControl=adjustableRunTime, executeInterval=1)
+#includeFunc    checkMesh(executeControl=timeStep, executeInterval=50)
 #includeFunc    scalarTransport(tracer)
 #includeFunc    cutPlanes
 #includeFunc    time(name=cpuTime, perTimeStep=yes)
@@ -51,16 +51,26 @@ FoamFile
 fluidMaxDeltaT
 {
     type            fluidMaxDeltaT;
+    #include    "$FOAM_CASE/system/controlDict"
+
+    EVO 128.74;
+    EVC 365.47;
+    IVO 357.74;
+    IVC 594.47;
+
+    dT  $maxDeltaT;
+    dT_valve    #calc "$dT*0.1";
+
     maxCo
     {
         type            table;
-        values          
-        ( 
-            ( 0 3 ) 
-            ( 128.74 10 ) 
-            ( 357.74 5 ) 
-            ( 594.47 3 ) 
-            ( 720 3 ) 
+        values
+        (
+            ( 0 3 )
+            ( $EVO 10 )
+            ( $IVO 5 )
+            ( $IVC 3 )
+            ( 720 3 )
         );
         interpolationScheme step;
         outOfBounds     repeat;
@@ -68,18 +78,18 @@ fluidMaxDeltaT
     maxDeltaT
     {
         type            table;
-        values          
-        ( 
-            ( 0 0.1 ) 
-            ( 128 0.01 ) 
-            ( 150 0.1 ) 
-            ( 357.74 0.01 ) 
-            ( 362.74 0.1 ) 
-            ( 365.74 0.01 ) 
-            ( 370.74 0.1 ) 
-            ( 594.47 0.01 ) 
-            ( 600 0.1 ) 
-            ( 720 0.1 ) 
+        values
+        (
+            ( 0 $dT )
+            ( $EVO              $dT_valve )
+            ( #calc "$EVO+2"    $dT )
+            ( $IVO              $dT_valve )
+            ( #calc "$IVO+2"    $dT )
+            ( #calc "$EVC-2"    $dT_valve )
+            ( $EVC              $dT )
+            ( #calc "$IVC-2"    $dT_valve )
+            ( $IVC              $dT )
+            ( 720               $dT_valve )
         );
         interpolationScheme step;
         outOfBounds     repeat;

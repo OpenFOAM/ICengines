@@ -51,14 +51,12 @@ FoamFile
 fluidMaxDeltaT
 {
     type            fluidMaxDeltaT;
-    #include    "$FOAM_CASE/system/controlDict"
-
     EVO 128.74;
     EVC 365.47;
     IVO 357.74;
     IVC 594.47;
 
-    dT  $maxDeltaT;
+    dT  $controlDict!maxDeltaT;
     dT_valve    #calc "$dT*0.1";
 
     maxCo

@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  9
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+xmin -60;
+xmax  -7;
+ymin -20;
+ymax  110;
+zmin  2.6;
+zmax  85;
+
+#include "blockMeshDict.cfg"
+
+
+boundary
+(
+    exhaustport.minZ
+    {
+        type wall;
+        faces
+        (
+                (0 3 2 1)
+        );
+    }
+
+    exhaustport.maxZ
+    {
+        type wall;
+        faces
+        (
+                (4 5 6 7)
+        );
+    }
+
+);
+
+
+// ************************************************************************* //

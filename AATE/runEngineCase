@@ -1,0 +1,108 @@
+#!/bin/bash
+set -e
+
+# For running on the cluster:
+# +---------------------------------------------------+
+# | 1. Insert your job submission script here         |
+# |                                                   |
+# | 2. Set the NSLOTS to number of processors         |
+# |                                                   |
+# | 3. Tell the job scheduler to run from current     |
+# |    directory                                      |
+# |                                                   |
+# | 4. Source OpenFOAM                                |
+# +---------------------------------------------------+
+
+# Check if argument is provided
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 [coarse|fine|snappy]"
+    exit 1
+fi
+
+# Validate argument
+if [ "$1" != "coarse" ] && [ "$1" != "fine" ] && [ "$1" != "snappy" ]; then
+    echo "Error: Argument must be 'coarse', 'fine', or 'snappy'"
+    exit 1
+fi
+
+# Set the value of the argument
+MESH_TYPE="$1"
+
+# Set default value for NSLOTS if not already set
+NSLOTS=${NSLOTS:-12}
+
+# Check if WM_PROJECT_DIR exists
+if [ ! -d "$WM_PROJECT_DIR" ]; then
+    echo "Error: OpenFOAM is not installed or sourced."
+    exit 1
+fi
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+runApplication -o -s $MESH_TYPE foamCloneCase -add 0.orig python_scripts caseTemplate $MESH_TYPE
+cd $MESH_TYPE/
+cp -r 0.orig 0
+
+# Check if meshToMesh_0 folder exist
+if [ "$MESH_TYPE" = "snappy" ]; then
+    if [ ! -d "../meshes/snappyHexMesh/snappyMeshes/constant/meshToMesh_0" ]; then
+        echo "Error: No meshToMesh_0 folder was found for snappy mesh."
+        exit 1
+    fi
+
+    # Clone case and prepare for snappy mesh
+    cp -r ../meshes/snappyHexMesh/snappyMeshes/constant/meshToMesh_* constant/
+
+
+    # Update the minLift value to 0.45 mm, since snappy mesh requires a larger minLift for
+    # preserving mesh quality. Changing the minLift also changes the mapping instances
+    # where the valves are opened/closed in the mesh generation routine, so the fluidMaxDeltaT
+    # function object should be adjusted accordingly
+    foamDictionary constant/dynamicMeshDict -entry mover/valves/intakeValve/minLift -set 0.00045
+    foamDictionary system/functions -entry fluidMaxDeltaT/EVO -set 135.02
+    foamDictionary system/functions -entry fluidMaxDeltaT/EVC -set 357.8
+    foamDictionary system/functions -entry fluidMaxDeltaT/IVO -set 364.02
+    foamDictionary system/functions -entry fluidMaxDeltaT/IVC -set 586.8
+
+    # Disable maxDeltaT functionality and use an uniform value
+    foamDictionary  system/functions -entry fluidMaxDeltaT/maxDeltaT/type -set uniform
+    foamDictionary  system/functions -entry fluidMaxDeltaT/maxDeltaT/value -add '$dT'
+
+    # Write the meshToMesh instances to the meshTimes file for dynamicMeshDict/topoChanger
+    ls -d constant/meshToMesh_* | sed 's/.*meshToMesh_//' \
+        | sort -n > constant/meshTimes
+    for meshDir in constant/meshToMesh_*; do
+        runApplication -a -s "$(basename "$meshDir")" reorderPatches -referenceRegion meshToMesh_0 -region "$(basename "$meshDir")" -overwrite
+done
+
+else
+    # Clone case and prepare for GridPro mesh
+    cp -r ../meshes/GridPro/$MESH_TYPE/meshToMesh_* constant/
+    cp -r ../meshes/GridPro/meshTimes_$MESH_TYPE constant/meshTimes
+
+    # Check if each meshToMesh_x folder exists for each mesh mapping instance in meshTimes
+    awk '{print $1}' constant/meshTimes | while read -r map; do
+        if [ ! -d "constant/meshToMesh_$map" ]; then
+            echo "Error: Folder meshToMesh_$map does not exist for mesh instance $map in meshTimes_$MESH_TYPE"
+            exit 1
+        fi
+    done
+fi
+
+# Copy start time mesh and initial conditions
+cp -r constant/meshToMesh_0/polyMesh constant/
+
+# Set number of subdomains
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
+
+# Decompose all meshToMesh instances
+runApplication decomposePar
+
+# Alternative to the for loop below, you can also use the following (requires gnu-parallel):
+# cat constant/meshTimes | parallel  --memfree 1G -j 10 decomposePar -region meshToMesh_{}
+for meshDir in constant/meshToMesh_*; do
+    runApplication -a decomposePar -region "$(basename "$meshDir")"
+done
+
+runParallel $(getApplication)

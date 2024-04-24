@@ -10,35 +10,6 @@
 # |                                                   |
 # | 4. Source OpenFOAM                                |
 # +---------------------------------------------------+
-# Tell GE to run the job from the current working directory
-#$ -cwd
-
-#Choose job name = $JOB_NAME
-#$ -N inj_test
-
-# Choose your queue
-#$ -pe orte 24 # 36*3
-#$ -o log.$JOB_ID.out
-#$ -e log.$JOB_ID.err
-#$ -m n # choose from e b a n s
-#$ -M XXXX@wartsila.com
-
-
-echo "Utilizing: $NSLOTS slots (cores)"
-
-# --- USER DEFINED PART STARTS --- #
-# This must be the symbolic link version so that PWD paths in wmake are set correctly
-OF_VERSION=OpenFOAM-dev
-
-# possible module loading
-module load gnu
-module load openmpi
-module load hdf5
-
-# module load boost # -- for ESI versions (v2006->)
-
-. /nfs/prg/OpenFOAM/$OF_VERSION/etc/bashrc
-
 # Check if WM_PROJECT_DIR exists
 if [ ! -d "$WM_PROJECT_DIR" ]; then
     echo "Error: OpenFOAM is not installed or sourced."
@@ -66,7 +37,6 @@ function float_to_foam_str() {
     done
 }
 
-foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
 
 CAD_str="$1"
 Piston_pos_str="$2"
@@ -111,6 +81,9 @@ else
 fi
 
 echo "Intake Valve State = $IntakeValveState, Exhaust Valve State = $ExhaustValveState"
+
+cd tmp_meshToMesh_$CAD
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
 
 tar -xzf constant/geometry.tar.gz -C constant
 #------------------------------Transforming the position----------------------------------------------#
@@ -197,5 +170,4 @@ mv constant/meshToMesh_$CAD ../snappyMeshes/constant/
 
 cd ../
 rm -rf tmp_meshToMesh_$CAD
-
 

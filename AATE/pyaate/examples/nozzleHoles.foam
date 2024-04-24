@@ -1,0 +1,64 @@
+injectorHole0
+{
+    $:__injector__
+    position    (0.10260448833758798 0.2010788143924715 -0.201026060429977);
+    direction   (0.8681627791959909 0.3596047974904981 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole1
+{
+    $:__injector__
+    position    (0.1010788143924715 0.20260448833758798 -0.201026060429977);
+    direction   (0.35960479749049823 0.8681627791959909 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole2
+{
+    $:__injector__
+    position    (0.09892118560752851 0.20260448833758798 -0.201026060429977);
+    direction   (-0.3596047974904981 0.8681627791959909 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole3
+{
+    $:__injector__
+    position    (0.09739551166241203 0.2010788143924715 -0.201026060429977);
+    direction   (-0.8681627791959909 0.3596047974904983 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole4
+{
+    $:__injector__
+    position    (0.09739551166241203 0.19892118560752853 -0.201026060429977);
+    direction   (-0.868162779195991 -0.35960479749049806 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole5
+{
+    $:__injector__
+    position    (0.09892118560752851 0.19739551166241204 -0.201026060429977);
+    direction   (-0.3596047974904987 -0.8681627791959907 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole6
+{
+    $:__injector__
+    position    (0.1010788143924715 0.19739551166241204 -0.201026060429977);
+    direction   (0.3596047974904984 -0.8681627791959908 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+
+injectorHole7
+{
+    $:__injector__
+    position    (0.10260448833758798 0.19892118560752853 -0.201026060429977);
+    direction   (0.8681627791959907 -0.35960479749049873 -0.34202014332566877);
+    #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+}
+

@@ -48,7 +48,14 @@ Users can generate snappyHexMesh meshes from CAD geometries. Note that the mesh 
 
 4. Configure ```createMeshes.sh``` in the same directory.
 
-4. Run ```python mesh_generator.py```, the meshes will be generated and put under the snappyMeshes/ folder.
+5. Run ```python mesh_generator.py```, the meshes will be generated and put under the snappyMeshes/ folder.
+
+6. Once all the meshes are generated in the ```snappyMeshes``` folder, reorder the patches to ensure consistency for mesh to mesh mapping
+
+    ```bash
+    cd snappyMeshes/
+    ./reorderPatches
+    ```
 
 ## Additional Notes
 

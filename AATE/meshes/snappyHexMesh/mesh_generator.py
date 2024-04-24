@@ -147,16 +147,16 @@ if __name__ == '__main__':
 
     cwd = Path.cwd()
 
-    # WARNING: When executed this loop will clone and launch multiple snappyHexMesh jobs,
-    # one for each mesh mapping instance. Please configure the create_snappy_mesh function,
-    # and createMesh.sh bash script before you uncomment and execute it.
-
     # This line overrides the calculated cad instances, for quick testing.
     #cads = np.array([0, 250, 500])
 
     _copy_case('snappyMeshes')
     for cad in cads:
+        # WARNING: When executed this loop will clone and launch multiple snappyHexMesh jobs,
+        # one for each mesh mapping instance. Please configure the create_snappy_mesh function,
+        # and createMesh.sh bash script before you uncomment and execute it.
         create_snappy_mesh(cad, engine)
+
         # If you are going to use the local submission option, you would need to add a sleep line inside
         # this loop, to avoid submitting all the mesh instances at the same time.
         # Example:

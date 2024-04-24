@@ -5,14 +5,17 @@ AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework designed for conducting ind
 
 ## Prerequisites
 Before using AATE, make sure you have the following installed:
-- OpenFOAM-dev dated 20240306 or newer.
+- OpenFOAM-dev dated 20240422 or newer.
 
 ## Case Setup: TCC-III Engine
 
 AATE features an engine simulation case setup of the TCC-III, a spark ignition 4-stroke 2-valve optical engine, developed by [University of Michigan](https://deepblue.lib.umich.edu/handle/2027.42/108382).
 
 ### How to prepare the simulation?
-AATE offers pre-generated fully structured [GridPro](https://www.gridpro.com/) meshes for the TCC-III engine simulation. Users can download these meshes and run the engine simulation with them following these steps:
+AATE offers pre-generated fully structured [GridPro](https://www.gridpro.com/) meshes, as well as routines for generation of [snappyHexMesh](https://doc.cfd.direct/openfoam/user-guide-v11/snappyhexmesh) mesh for the TCC-III engine simulation.
+
+#### Pre-generated GridPro meshes
+Users can download these meshes and run the engine simulation with them following these steps:
 
 1. Download the meshes to your computer by executing the following command:
     ```bash
@@ -22,25 +25,51 @@ AATE offers pre-generated fully structured [GridPro](https://www.gridpro.com/) m
 
 2. Run the case using the downloaded meshes:
     ```bash
-    ./runGridProCase <coarse|fine>
+    ./runEngineCase <coarse|fine>
     ```
 
-3. Optionally, you can configure the `runGridProCase` script as a SLURM job for running the simulation in a computing environment.
 
 Please note: `<coarse|fine>` represents the desired mesh resolution. Choose the appropriate option based on your simulation requirements.
+
+#### Generating snappyHexMesh meshes
+
+Users can generate snappyHexMesh meshes from CAD geometries. Note that the mesh generation of multiple mesh instances is pseudo-parallelised, and the scripts  provided requires adjustments before usage.
+
+1. Install `pyaate` python module, by following the instructions in  [pyaate README](pyaate/README.md)
+
+2. Go to `meshes/snappyHexMesh/` directory, and browse [mesh_generator.py](meshes/snappyHexMesh//mesh_generator.py)
+
+    ```bash
+    cd meshes/snappyHexMesh
+    <text_editor> mesh_generator.py
+    ```
+
+3. Configure create_snappy_meshes() function and the for loop it is called to perform serial or parallel execution, based on the platform (cluster/PC) you are using. The script itself provides detailed information.
+
+4. Configure ```createMeshes.sh``` in the same directory.
+
+4. Run ```python mesh_generator.py```, the meshes will be generated and put under the snappyMeshes/ folder.
 
 ## Additional Notes
 
 - For simulations that utilize fine resolution GridPro meshes, we strongly recommend using a larger computing resource than a personal computer.
 
-## Upcoming Features
+- The generated snappy meshes have rather large cell counts (>1.5M cells). Please keep in mind that generation process may take a bit of time, especially in serial.
 
-1. **SnappyHexMesh-based Mesh Generation Routines**: AATE will soon provide `snappyHexMesh`-based mesh generation routines, offering users an alternative method for generating meshes tailored to their simulation needs. Stay tuned for updates on this feature.
-
-2. **Python-based Pre- and Post-Processing Routines**: AATE will introduce `python`-based pre- and post-processing routines specifically designed for engine simulations. These routines will enhance the flexibility and customization options available to users during both the setup and analysis phases of their simulations.
+- You can configure the `runEngineCase` script as a SLURM job for running the simulation in a computing environment.
 
 ## Links and References
 
-- The TCC-III simulation setup provided in this repository originates from the master thesis work of Mr. Bishal Shrestha, from Aalto University Finland.
+- The TCC-III simulation setup and the snappy meshing strategy provided in this repository originates from the master thesis work of Mr. Bishal Shrestha, from Aalto University Finland.
     - [Link to thesis](https://aaltodoc.aalto.fi/items/72c50f37-f365-47c1-9c28-ba54a1c337d8)
     - [Simulation video](https://youtu.be/EKZjcYNGCfg?si=3mqDxk1PTpv0U61P)
+
+- We acknowledge and thank [University of Michigan](https://deepblue.lib.umich.edu/handle/2027.42/108382) for allowing us to use the TCC-III geometry in this repository.
+
+- We thank Dr. Clemens Goessnitzer for his help and for fruitful discussions in engine simulations in OpenFOAM.
+
+- We thank CFD-Direct; Henry Weller, Will Bainbridge and Chris Greenshields for their efforts making engine simulations in OpenFOAM a possibility.
+
+## Contributors
+- Heikki Kahila D.Sc. (Tech.), original development of gridpro meshing strategy and pyaate python module.
+- Bulut Tekgül D.Sc. (Tech.), improvements, automation of snappy mesh generation, template case setup, scripting, post-processing.

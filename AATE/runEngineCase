@@ -72,9 +72,6 @@ if [ "$MESH_TYPE" = "snappy" ]; then
     # Write the meshToMesh instances to the meshTimes file for dynamicMeshDict/topoChanger
     ls -d constant/meshToMesh_* | sed 's/.*meshToMesh_//' \
         | sort -n > constant/meshTimes
-    for meshDir in constant/meshToMesh_*; do
-        runApplication -a -s "$(basename "$meshDir")" reorderPatches -referenceRegion meshToMesh_0 -region "$(basename "$meshDir")" -overwrite
-done
 
 else
     # Clone case and prepare for GridPro mesh

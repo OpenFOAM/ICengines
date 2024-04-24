@@ -57,6 +57,10 @@ Users can generate snappyHexMesh meshes from CAD geometries. Note that the mesh 
     ./reorderPatches
     ```
 
+7. Run the case using the generated meshes:
+    ```bash
+    ./runEngineCase snappy
+    ```
 ## Additional Notes
 
 - For simulations that utilize fine resolution GridPro meshes, we strongly recommend using a larger computing resource than a personal computer.

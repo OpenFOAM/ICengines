@@ -1,7 +1,7 @@
-# Corefiles
+# Core files
 core
 
-# Build directories - anywhere
+# Build directories
 linux*Clang*/
 linux*Gcc*/
 linux*Icc*/
@@ -9,20 +9,40 @@ solaris*Gcc*/
 SunOS*Gcc*/
 platforms/
 
-# Source packages - anywhere
+# Source packages
 *.tar.bz2
 *.tar.gz
 *.tar
 *.tgz
 *.txz
-*.tgz
+
+# Compiled Python files
+*.pyc
+
+# Editor/IDE temporary files
+__*__.*
+
+# Python egg cache
+*.egg*
+
+# Image files
+*.png
+
+# Build directories
+build/
 
 # Ignore cloned case setups
-gridProCase*/
+snappy/
 
 # Ignore downloaded meshes
 coarse/
 fine/
+tmp_*/
+snappyMeshes/
+output/
 
-# Ignore log files
+# Log files
 log.*
+
+# Temporary files
+*.done

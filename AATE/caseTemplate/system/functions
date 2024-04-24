@@ -21,7 +21,7 @@ FoamFile
 #includeFunc    patchSurface(name=valveSurfaces, patch="(iv|ev|piston).*",
                 writeControl=adjustableRunTime, writeInterval=5)
 #includeFunc    time(name=cpuTime, perTimeStep=yes)
-#includeFunc    timeStep
+#includeFunc    userTimeStep
 #includeFunc    CourantNo(executeControl=timeStep, executeInterval=1, executeAtStart=false)
 #includeFunc cellMax
 (

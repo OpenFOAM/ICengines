@@ -46,7 +46,7 @@ Users can generate snappyHexMesh meshes from CAD geometries. Note that the mesh 
 
 3. Configure create_snappy_meshes() function and the for loop it is called to perform serial or parallel execution, based on the platform (cluster/PC) you are using. The script itself provides detailed information.
 
-4. Configure ```createMeshes.sh``` in the same directory.
+4. Configure ```createMesh``` in the same directory.
 
 5. Run ```python mesh_generator.py```, the meshes will be generated and put under the snappyMeshes/ folder.
 

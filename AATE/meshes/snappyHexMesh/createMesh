@@ -1,15 +1,23 @@
 #!/bin/bash
 
-# +---------------------------------------------------+
-# | 1. Insert your job submission script here         |
-# |                                                   |
-# | 2. Set the NSLOTS to number of processors         |
-# |                                                   |
-# | 3. Tell the job scheduler to run from current     |
-# |    directory                                      |
-# |                                                   |
-# | 4. Source OpenFOAM                                |
-# +---------------------------------------------------+
+# Usage: ./createMesh <CAD_str> <Piston_pos_str> <IV_str> <EV_str> <cylinder_scale_str>
+# Example: ./createMesh 0 0 0 0 1.0
+
+# This script generates mesh for internal combustion engine components using OpenFOAM.
+
+# Arguments:
+#   CAD_str: String representing CAD model parameter.
+#   Piston_pos_str: String representing piston position parameter.
+#   IV_str: String representing intake valve parameter.
+#   EV_str: String representing exhaust valve parameter.
+#   cylinder_scale_str: String representing liner scaling parameter.
+
+# Instructions:
+#   1. Insert your job submission script here.
+#   2. Set the NSLOTS to the number of processors.
+#   3. Tell the job scheduler to run from the current directory.
+#   4. Source OpenFOAM.
+
 # Check if WM_PROJECT_DIR exists
 if [ ! -d "$WM_PROJECT_DIR" ]; then
     echo "Error: OpenFOAM is not installed or sourced."

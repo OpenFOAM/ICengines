@@ -49,7 +49,6 @@ def create_snappy_mesh(cad, engine):
     Returns:
         None
     """
-    dirpath = _copy_case('tmp_meshToMesh_' + foam.float_to_foam_str([cad])[0])
     piston_pos = engine.piston_pos_from_tdc(cad) / -1e3
     intake_lift = engine.valves.get_valve("intakeValve").interp_lift(cad) * -1
     exhaust_lift = engine.valves.get_valve("exhaustValve").interp_lift(cad) * -1

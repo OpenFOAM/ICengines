@@ -19,5 +19,5 @@ runApplication -s $REGION blockMesh -region $REGION -dict system/MeshingFiles/$B
 
 # Decompose, run snappyHexMesh in parallel, then reconstruct the meshes
 runApplication -s $REGION decomposePar -region $REGION
-runParallel -s $REGION snappyHexMesh -region $REGION -dict system/snappyHexMeshDict_$CAD -overwrite
+runParallel -s $REGION snappyHexMesh -region $REGION -dict system/snappyHexMeshDict -overwrite
 runApplication -s $REGION reconstructPar -region $REGION -constant

@@ -19,105 +19,104 @@ snap            true;
 
 addLayers       true;
 
-CAD 1e30;
-
 geometry
 {
     cylinderhead
     {
         type            triSurfaceMesh;
-        file            "CylinderHead.stl";
+        file            "cylinderhead.stl";
     }
     liner
     {
         type            triSurfaceMesh;
-         file            #calc "\"CylinderLiner_\" + name($CAD) + \".stl\"";
+         file           "liner.stl";
     }
     inlet
     {
         type            triSurfaceMesh;
-        file            "Inlet.stl";
+        file            "inlet.stl";
     }
     outlet
     {
         type            triSurfaceMesh;
-        file            "Outlet.stl";
+        file            "outlet.stl";
     }
     piston
     {
         type            triSurfaceMesh;
-         file            #calc "\"Piston_\" + name($CAD) + \".stl\"";    }
-    CreviceRefinement
+        file            "piston.stl";
+    }
+    crevice_refinement
     {
         type            triSurfaceMesh;
-         file            #calc "\"CreviceRefinement_\" + name($CAD) + \".stl\"";
+        file            "crevice_refinement.stl";
     }
     intakeport
     {
         type            triSurfaceMesh;
-        file            "IntakePort.stl";
+        file            "intakeport.stl";
     }
     iv_head
     {
         type            triSurfaceMesh;
-         file            #calc "\"IntakeValveHead_\" + name($CAD) + \".stl\"";
+        file            "iv_head.stl";
     }
     iv_head_refinement
     {
         type            triSurfaceMesh;
-         file            #calc "\"IntakeValveHeadRefinement_\" + name($CAD) + \".stl\"";
-             }
+        file            "iv_head_refinement.stl";
+    }
     iv_stem
     {
         type            triSurfaceMesh;
-         file            #calc "\"IntakeValveStem_\" + name($CAD) + \".stl\"";
+        file            "iv_stem.stl";
     }
     exhaustport
     {
         type            triSurfaceMesh;
-        file            "ExhaustPort.stl";
+        file            "exhaustport.stl";
     }
     ev_head
     {
         type            triSurfaceMesh;
-         file            #calc "\"ExhaustValveHead_\" + name($CAD) + \".stl\"";
+        file            "ev_head.stl";
     }
     ev_stem
     {
         type            triSurfaceMesh;
-         file            #calc "\"ExhaustValveStem_\" + name($CAD) + \".stl\"";
+        file            "ev_stem.stl";
     }
     ev_head_refinement
     {
         type            triSurfaceMesh;
-         file            #calc "\"ExhaustValveHeadRefinement_\" + name($CAD) + \".stl\"";
+        file            "ev_head_refinement.stl";
     }
     sparkplug
     {
         type            triSurfaceMesh;
-        file            "SparkPlug.stl";
+        file            "sparkplug.stl";
     }
-    InletPatchRefinementBox
+    inlet_refinementbox
     {
         type            searchableCylinder;
         point1          ( 0.025 -0.11 0.063 );
         point2          ( 0.025 -0.095 0.063 );
         radius          0.016;
     }
-    OutletPatchRefinementBox
+    outlet_refinementbox
     {
         type            searchableCylinder;
         point1          ( -0.025 0.11 0.063 );
         point2          ( -0.025 0.095 0.063 );
         radius          0.016;
     }
-    refinementsphere1
+    refinement_sphere_1
     {
         type            searchableSphere;
         centre          ( 0.028 0.003 0.043 );
         radius          0.004;
     }
-    refinementsphere2
+    refinement_sphere_2
     {
         type            searchableSphere;
         centre          ( -0.028 -0.003 0.043 );
@@ -127,7 +126,7 @@ geometry
 
 castellatedMeshControls
 {
-    insidePoints    ( ( 0.027 -0.043 0.06 ) );
+    insidePoint    (0.008 0.0 -0.007);
     maxLocalCells   10000000;
     maxGlobalCells  10000000;
     minRefinementCells 0;
@@ -217,22 +216,22 @@ castellatedMeshControls
             mode            distance;
             levels          ( ( 0.00045 4 ) ( 0.001 2 ) ( 0.007 1 ) );
         }
-        InletPatchRefinementBox
+        inlet_refinementbox
         {
             mode            inside;
             levels          ( ( 1 1 ) );
         }
-        OutletPatchRefinementBox
+        outlet_refinementbox
         {
             mode            inside;
             levels          ( ( 1 1 ) );
         }
-        refinementsphere1
+        refinement_sphere_1
         {
             mode            inside;
             levels          ( ( 2 4 ) );
         }
-        refinementsphere2
+        refinement_sphere_2
         {
             mode            inside;
             levels          ( ( 2 4 ) );
@@ -242,7 +241,7 @@ castellatedMeshControls
             mode            distance;
             levels          ( ( 0.046 1 ) );
         }
-        CreviceRefinement
+        crevice_refinement
         {
             mode            inside;
             levels          ( ( 4 4 ) );

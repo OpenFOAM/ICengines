@@ -24,10 +24,10 @@ if [ -z "$NSLOTS" ]; then
     NSLOTS=24
 fi
 
-function changeInsidePoints() {
+function changeInsidePoint() {
     local value="$1"
-	foamDictionary  system/snappyHexMeshDict_$CAD \
-					-entry castellatedMeshControls/insidePoints\
+	foamDictionary  system/snappyHexMeshDict \
+					-entry castellatedMeshControls/insidePoint\
 					-set "$value"
 }
 
@@ -81,6 +81,7 @@ else
 fi
 
 echo "Intake Valve State = $IntakeValveState, Exhaust Valve State = $ExhaustValveState"
+foamCloneCase templateCase tmp_meshToMesh_$CAD
 
 cd tmp_meshToMesh_$CAD
 foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
@@ -88,56 +89,55 @@ foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
 tar -xzf constant/geometry.tar.gz -C constant
 #------------------------------Transforming the position----------------------------------------------#
 # Valves are in fully closed position which is denoted by <Name0.stl>, Piston is at TDC, it need to to be transformed/scaled to its position.
-surfaceTransformPoints "translate=(0 0 $IV)" constant/geometry/IntakeValveHeadRefinement0.stl constant/geometry/IntakeValveHeadRefinement_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $EV)" constant/geometry/ExhaustValveHeadRefinement0.stl constant/geometry/ExhaustValveHeadRefinement_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $IV)" constant/geometry/IntakeValveHead0.stl constant/geometry/IntakeValveHead_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $EV)" constant/geometry/ExhaustValveHead0.stl constant/geometry/ExhaustValveHead_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $IV)" constant/geometry/IntakeValveStem0.stl constant/geometry/IntakeValveStem_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $EV)" constant/geometry/ExhaustValveStem0.stl constant/geometry/ExhaustValveStem_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $Piston_pos)" constant/geometry/Piston0.stl constant/geometry/Piston_$CAD.stl
-surfaceTransformPoints "translate=(0 0 $Piston_pos)" constant/geometry/CreviceRefinement0.stl constant/geometry/CreviceRefinement_$CAD.stl
-surfaceTransformPoints "scale=(1 1 $cylinder_scale)" constant/geometry/CylinderLiner0.stl constant/geometry/CylinderLiner_$CAD.stl
+surfaceTransformPoints "translate=(0 0 $IV)" constant/geometry/iv_head_refinement0.stl constant/geometry/iv_head_refinement.stl
+surfaceTransformPoints "translate=(0 0 $EV)" constant/geometry/ev_head_refinement0.stl constant/geometry/ev_head_refinement.stl
+surfaceTransformPoints "translate=(0 0 $IV)" constant/geometry/iv_head0.stl constant/geometry/iv_head.stl
+surfaceTransformPoints "translate=(0 0 $EV)" constant/geometry/ev_head0.stl constant/geometry/ev_head.stl
+surfaceTransformPoints "translate=(0 0 $IV)" constant/geometry/iv_stem0.stl constant/geometry/iv_stem.stl
+surfaceTransformPoints "translate=(0 0 $EV)" constant/geometry/ev_stem0.stl constant/geometry/ev_stem.stl
+surfaceTransformPoints "translate=(0 0 $Piston_pos)" constant/geometry/piston0.stl constant/geometry/piston.stl
+surfaceTransformPoints "translate=(0 0 $Piston_pos)" constant/geometry/crevice_refinement0.stl constant/geometry/crevice_refinement.stl
+surfaceTransformPoints "scale=(1 1 $cylinder_scale)" constant/geometry/liner0.stl constant/geometry/liner.stl
+rm -rf constant/geometry/*0.stl
 
 #----------------------------------------------------------------------------------------------------------------------------------#
 
-cp -r system/snappyHexMeshDict system/snappyHexMeshDict_$CAD
-foamDictionary  system/snappyHexMeshDict_$CAD  -entry CAD -set $CAD
 
 if [ "$IntakeValveState" == "CLOSED" ] && [ "$ExhaustValveState" == "CLOSED" ]; then
-	changeInsidePoints "((-0.027 0.043 0.06))"
+	changeInsidePoint "(-0.027 0.043 0.06)"
 
 	./meshRun.sh exhaust_$CAD ExhaustClosed_blockMeshDict $CAD
 
-	changeInsidePoints "((0.027 -0.043 0.06))"
+	changeInsidePoint "(0.027 -0.043 0.06)"
 	./meshRun.sh intake_$CAD IntakeClosed_blockMeshDict $CAD
 
-	changeInsidePoints "((0.008 0.0 -0.007))"
+	changeInsidePoint "(0.008 0.0 -0.007)"
 	./meshRun.sh meshToMesh_$CAD Master_blockMeshDict_AllClosed $CAD
 	mergeMeshes -addRegions '("'exhaust_$CAD'" "'intake_$CAD'")' -region meshToMesh_$CAD -overwrite
 fi
 
 if [ "$IntakeValveState" == "OPEN" ] && [ "$ExhaustValveState" == "CLOSED" ]; then
-	changeInsidePoints "((-0.027 0.043 0.06))"
+	changeInsidePoint "(-0.027 0.043 0.06)"
 	./meshRun.sh exhaust_$CAD ExhaustClosed_blockMeshDict $CAD
 
-	changeInsidePoints "(( 0.008  0.0 -0.007) ( 0.027 -0.05 0.066))"
+	changeInsidePoint "( 0.008  0.0 -0.007)"
 	./meshRun.sh meshToMesh_$CAD Master_blockMeshDict_ExhaustClosed $CAD
 
 	mergeMeshes -addRegions '("'exhaust_$CAD'")' -region meshToMesh_$CAD -overwrite
 fi
 
 if [ "$IntakeValveState" == "CLOSED" ] && [ "$ExhaustValveState" == "OPEN" ]; then
-	changeInsidePoints "((0.027 -0.043 0.06))"
+	changeInsidePoint "(0.027 -0.043 0.06)"
 	./meshRun.sh intake_$CAD IntakeClosed_blockMeshDict $CAD
 
-	changeInsidePoints "(( 0.008 0.0 -0.007) (-0.027 0.05 0.066))"
+	changeInsidePoint "( 0.008 0.0 -0.007)"
 	./meshRun.sh meshToMesh_$CAD Master_blockMeshDict_IntakeClosed $CAD
 
 	mergeMeshes -addRegions '("'intake_$CAD'")' -region meshToMesh_$CAD -overwrite
 fi
 
 if [ "$IntakeValveState" == "OPEN" ] && [ "$ExhaustValveState" == "OPEN" ]; then
-	changeInsidePoints "(( 0.008  0.0 -0.007) (-0.027  0.05 0.066) ( 0.027 -0.05 0.066))"
+	changeInsidePoint "( 0.008  0.0 -0.007)"
 	./meshRun.sh meshToMesh_$CAD AllOpen_blockMeshDict $CAD
 fi
 

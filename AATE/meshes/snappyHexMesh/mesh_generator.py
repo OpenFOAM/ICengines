@@ -64,18 +64,18 @@ def create_snappy_mesh(cad, engine):
     # | using SunGrid engine,and generates the mesh.      |
     # |                                                   |
     # | Make the necessary changes below, as well as in   |
-    # | createMesh.sh to launch this job in your          |
+    # | createMesh to launch this job in your          |
     # | environment, preferably by submitting it into a   |
     # | queue.                                            |
     # +---------------------------------------------------+
 
-    # Cluster submission (requires modification to createMesh.sh)
-    #subprocess.call('qsub createMesh.sh {} {} {} {} {}'.format(
-    #    str(cad),str(piston_pos), str(intake_lift),str(exhaust_lift),
-    #    str(cylinder_scale)), shell=True)
+    # Cluster submission (requires modification to createMesh)
+    subprocess.call('qsub createMesh {} {} {} {} {}'.format(
+        str(cad),str(piston_pos), str(intake_lift),str(exhaust_lift),
+        str(cylinder_scale)), shell=True)
 
     # Local submission
-    #subprocess.call('./createMesh.sh {} {} {} {} {}'.format(
+    #subprocess.call('./createMesh {} {} {} {} {}'.format(
     #    str(cad),str(piston_pos), str(intake_lift),str(exhaust_lift),
     #    str(cylinder_scale)), shell=True)
 
@@ -147,13 +147,13 @@ if __name__ == '__main__':
     cwd = Path.cwd()
 
     # This line overrides the calculated cad instances, for quick testing.
-    #cads = np.array([0, 250, 500])
+    cads = np.array([0, 500])
 
     _copy_case('snappyMeshes')
     for cad in cads:
         # WARNING: When executed this loop will clone and launch multiple snappyHexMesh jobs,
         # one for each mesh mapping instance. Please configure the create_snappy_mesh function,
-        # and createMesh.sh bash script before you uncomment and execute it.
+        # and createMesh bash script before you uncomment and execute it.
         create_snappy_mesh(cad, engine)
 
         # If you are going to use the local submission option, you would need to add a sleep line inside

@@ -94,12 +94,12 @@ cp -r constant/meshToMesh_0/polyMesh constant/
 foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
 
 # Decompose all meshToMesh instances
-runApplication decomposePar
+runApplication decomposePar -noFunctionObjects
 
 # Alternative to the for loop below, you can also use the following (requires gnu-parallel):
-# cat constant/meshTimes | parallel  --memfree 1G -j 10 decomposePar -region meshToMesh_{}
+# cat constant/meshTimes | parallel  --memfree 1G -j 10 decomposePar -region meshToMesh_{} -noFunctionObjects
 for meshDir in constant/meshToMesh_*; do
-    runApplication -a decomposePar -region "$(basename "$meshDir")"
+    runApplication -a decomposePar -region "$(basename "$meshDir")" -noFunctionObjects
 done
 
 runParallel $(getApplication)

@@ -32,10 +32,12 @@ if [ -z "$NSLOTS" ]; then
     NSLOTS=24
 fi
 
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
+
 function changeInsidePoint() {
     local value="$1"
 	foamDictionary  system/snappyHexMeshDict \
-					-entry castellatedMeshControls/insidePoint\
+					-entry castellatedMeshControls/insidePoints\
 					-set "$value"
 }
 
@@ -112,40 +114,39 @@ rm -rf constant/geometry/*0.stl
 
 
 if [ "$IntakeValveState" == "CLOSED" ] && [ "$ExhaustValveState" == "CLOSED" ]; then
-	changeInsidePoint "(-0.027 0.043 0.06)"
-
+	changeInsidePoint "((-0.027 0.043 0.06))"
 	./meshRun.sh exhaust_$CAD ExhaustClosed_blockMeshDict $CAD
 
-	changeInsidePoint "(0.027 -0.043 0.06)"
+	changeInsidePoint "((0.027 -0.043 0.06))"
 	./meshRun.sh intake_$CAD IntakeClosed_blockMeshDict $CAD
 
-	changeInsidePoint "(0.008 0.0 -0.007)"
+	changeInsidePoint "((0.008 0.0 -0.007))"
 	./meshRun.sh meshToMesh_$CAD Master_blockMeshDict_AllClosed $CAD
 	mergeMeshes -addRegions '("'exhaust_$CAD'" "'intake_$CAD'")' -region meshToMesh_$CAD -overwrite
 fi
 
 if [ "$IntakeValveState" == "OPEN" ] && [ "$ExhaustValveState" == "CLOSED" ]; then
-	changeInsidePoint "(-0.027 0.043 0.06)"
+	changeInsidePoint "((-0.027 0.043 0.06))"
 	./meshRun.sh exhaust_$CAD ExhaustClosed_blockMeshDict $CAD
 
-	changeInsidePoint "( 0.008  0.0 -0.007)"
+	changeInsidePoint "(( 0.008  0.0 -0.007) ( 0.027 -0.05 0.066))"
 	./meshRun.sh meshToMesh_$CAD Master_blockMeshDict_ExhaustClosed $CAD
 
 	mergeMeshes -addRegions '("'exhaust_$CAD'")' -region meshToMesh_$CAD -overwrite
 fi
 
 if [ "$IntakeValveState" == "CLOSED" ] && [ "$ExhaustValveState" == "OPEN" ]; then
-	changeInsidePoint "(0.027 -0.043 0.06)"
+	changeInsidePoint "((0.027 -0.043 0.06))"
 	./meshRun.sh intake_$CAD IntakeClosed_blockMeshDict $CAD
 
-	changeInsidePoint "( 0.008 0.0 -0.007)"
+	changeInsidePoint "(( 0.008 0.0 -0.007) (-0.027 0.05 0.066))"
 	./meshRun.sh meshToMesh_$CAD Master_blockMeshDict_IntakeClosed $CAD
 
 	mergeMeshes -addRegions '("'intake_$CAD'")' -region meshToMesh_$CAD -overwrite
 fi
 
 if [ "$IntakeValveState" == "OPEN" ] && [ "$ExhaustValveState" == "OPEN" ]; then
-	changeInsidePoint "( 0.008  0.0 -0.007)"
+	changeInsidePoint "(( 0.008  0.0 -0.007) (-0.027  0.05 0.066) ( 0.027 -0.05 0.066))"
 	./meshRun.sh meshToMesh_$CAD AllOpen_blockMeshDict $CAD
 fi
 

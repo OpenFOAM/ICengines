@@ -18,6 +18,7 @@ platforms/
 
 # Compiled Python files
 *.pyc
+venv_pyaate/
 
 # Editor/IDE temporary files
 __*__.*

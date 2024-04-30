@@ -20,8 +20,7 @@ fig.subplots_adjust(right=0.75)
 
 ax2 = ax.twinx()
 ax3 = ax.twinx()
-ax3.spines.right.set_position(("axes", 1.15))
-
+ax3.spines['left'].set_position(('axes', 1.15))
 # Load deltaT data
 FO_FILE = Path("postProcessing/userTimeStep/0/userTimeStep.dat")
 data = fo.load_data(FO_FILE, append=True, latest=True, verbose=False)

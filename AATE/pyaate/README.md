@@ -8,6 +8,7 @@
     - <code> cd path/to/repo/pyaate</code>
     - <code>python3 -m venv venv_pyaate </code>
     - <code>source venv_pyaate/bin/activate </code>
+    - <code>pip install --upgrade pip </code>
     - <code>pip install -r pyaate/requirements.txt </code>
 
 - Installing pyaate:

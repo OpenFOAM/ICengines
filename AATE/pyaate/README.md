@@ -5,20 +5,17 @@
     - <code>conda create --name pyaate </code>
     - <code>conda activate pyaate</code>
 - Using venv:
-    - <code> cd path/to/repo/pyaate</code>
-    - <code>python3 -m venv venv_pyaate </code>
+    - <code> cd path/to/repo/AATE</code>
+    - <code>python3 (python3.6) -m venv venv_pyaate </code>
     - <code>source venv_pyaate/bin/activate </code>
     - <code>pip install --upgrade pip </code>
     - <code>pip install -r pyaate/requirements.txt </code>
 
 - Installing pyaate:
-    - <code> cd path/to/repo/pyaate</code>
-    - <code>pip install .</code>
-    - development mode: <code>pip install -e .</code>
-
+    - <code>pip install -e pyaate/</code>
 
 ## Requirements
-- Python 3 is required.
+- Python >3.6 is required.
 - See requirements.txt
 
 ## Run tests:

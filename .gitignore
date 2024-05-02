@@ -21,7 +21,7 @@ platforms/
 venv_pyaate/
 
 # Editor/IDE temporary files
-__*__.*
+__py*__.*
 
 # Python egg cache
 *.egg*

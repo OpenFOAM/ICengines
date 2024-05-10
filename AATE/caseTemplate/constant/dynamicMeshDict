@@ -95,8 +95,8 @@ mover
             motion
             {
                 type            scale;
-                value           0.001;  // Scale the exhaust.txt from mm to m
-                scale
+                scale           0.001;  // Scale the exhaust.txt from mm to m
+                value
                 {
                     type    tableFile;
                     format  csv;

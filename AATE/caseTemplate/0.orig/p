@@ -16,7 +16,7 @@ FoamFile
 
 dimensions      [1 -1 -2 0 0 0 0];
 
-internalField   uniform 1.0e5;
+internalField   uniform 1 [bar];
 
 boundaryField
 {
@@ -32,13 +32,16 @@ boundaryField
         phi             phi;
         rho             rho;
         gamma           1.4;
-        p0             
+        p0
         {
-        	type	table;
-        	values	
-        	(
-        		#include "${FOAM_CASE}/constant/ExhaustPressureOpenFOAM.txt" 
-        	);
+        	type	        table;
+            format          csv;
+            file            "constant/exhaustPressure.txt";
+            nHeaderLine     2;          // Number of header lines
+            units           ([CAD] [bar]);
+            columns         (0 2);      // Column indices
+            separator       " ";        // Optional (defaults to ",")
+            mergeSeparators yes;        // Merge multiple separators
         	outOfBounds		repeat;
         	interpolationScheme	linear;
         }
@@ -47,13 +50,16 @@ boundaryField
     inlet
     {
         $outlet;
-        p0             
+        p0
         {
-        	type	table;
-        	values	
-        	(
-        		#include "${FOAM_CASE}/constant/IntakePressureOpenFOAM.txt" 
-        	);
+        	type	        tableFile;
+            format          csv;
+            file            "constant/intakePressure.txt";
+            nHeaderLine     2;          // Number of header lines
+            units           ([CAD] [bar]);
+            columns         (0 2);      // Column indices
+            separator       " ";        // Optional (defaults to ",")
+            mergeSeparators yes;        // Merge multiple separators
         	outOfBounds		repeat;
         	interpolationScheme	linear;
         }

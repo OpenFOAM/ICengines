@@ -80,7 +80,7 @@ mover
                 type    table;
                 values
                 (
-                    #include "$FOAM_CASE/constant/intake.txt"
+                    #include "$FOAM_CASE/constant/intakeLift.txt"
                 );
                 // For multi-cycle simulations, use repeat
                 outOfBounds     repeat;
@@ -100,11 +100,10 @@ mover
                 {
                     type    tableFile;
                     format  csv;
-                    file    "$FOAM_CASE/constant/exhaust.txt";
+                    file    "$FOAM_CASE/constant/exhaustLift.txt";
                     nHeaderLine 2;
-                    refColumn   0;
+                    columns   (0 1);
                     separator   " ";
-                    componentColumns    ( 1 );
                     mergeSeparators yes;
                     outOfBounds     repeat;
                     interpolationScheme linear;

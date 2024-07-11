@@ -1,11 +1,12 @@
 # AATE: Advanced Analysis Tool for Engines
+![OpenFOAM 12](https://img.shields.io/badge/OpenFOAM-12-brightgreen)
 
 ## Introduction
 AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework designed for conducting industrial-scale engine CFD simulations. This toolset is provided by the Thermofluids & Simulations team from Wärtsilä Finland, a leading provider of sustainable solutions for the marine and energy markets.
 
 ## Prerequisites
 Before using AATE, make sure you have the following installed:
-- OpenFOAM-dev dated 20240422 or newer.
+- OpenFOAM-12
 
 ## Case Setup: TCC-III Engine
 

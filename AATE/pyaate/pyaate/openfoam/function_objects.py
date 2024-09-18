@@ -118,9 +118,9 @@ def load_data(fo_path, append=True, verbose=False, repeat=0, start=0):
 
     if(repeat>0):
         cycle = (data.Time+start)//repeat
+        data.Time = data.Time - cycle*repeat
         cycle =  cycle - cycle[0]
         cycle.name = 'Cycle'
         data = pd.concat([data,cycle], axis=1)
-        data.Time -= data.Cycle*repeat
 
     return data

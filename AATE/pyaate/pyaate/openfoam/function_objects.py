@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
-
+import glob
 # The following functions utilise pandas to read function object data from openfoam
 # case directory with additional utilities such as appending data etc.
 
@@ -89,7 +89,7 @@ def append_restart_data(data0, data1, verbose=True):
 
 
 
-def load_data(fo_file, append=True, latest=True, verbose=False):
+def load_data(fo_path, append=True, latest=True, verbose=False):
     """
     Load OpenFOAM function object data into a pandas data frame.
     input:
@@ -103,26 +103,19 @@ def load_data(fo_file, append=True, latest=True, verbose=False):
     return:
         data: Pandas data frame including the function object data.
     """
-    fo_file = Path(fo_file)
-    fo_dir = fo_file.parents[1]
-    fo_filename = fo_file.name
-    #time_dirs = os.listdir(str(fo_dir)) # does not work in python 2.7
-    time_dirs = [x.name for x in fo_dir.iterdir() if x.is_dir()]
+    fo_path = Path(fo_path)
+    #fo_dir = fo_file.parents[1]
+    time_dirs = os.listdir(str(fo_path))
     time_dirs.sort(key=float)
 
-    data = load_data_pandas(fo_file)
+    fo_filename = glob.glob(os.path.join(fo_path,time_dirs[0],"*.dat"))[0]
+    if(verbose):
+        print("Reading data from file: {}".format(fo_filename))
+    data = load_data_pandas(fo_filename)
 
     if(append and (len(time_dirs)>1)):
-        for ti in time_dirs:
-            if(latest):
-                file_i = get_latest_file(fo_dir, fo_filename, ti)
-            else:
-                file_i = Path(fo_dir, ti, fo_filename)
-
-            if(verbose):
-                str_ = Path(*list(file_i.parts)[-4:])
-                print("Reading data from file " + repr(str_.as_posix()))
-
+        for ti in time_dirs[1:]:
+            file_i = glob.glob(os.path.join(fo_path,ti,"*.dat"))[0]
             data_i = load_data_pandas(file_i)
             data = append_restart_data(data, data_i, verbose=verbose)
 

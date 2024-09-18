@@ -89,7 +89,7 @@ def append_restart_data(data0, data1, verbose=True):
 
 
 
-def load_data(fo_path, append=True, verbose=False):
+def load_data(fo_path, append=True, verbose=False, repeat=0, start=0):
     """
     Load OpenFOAM function object data into a pandas data frame.
     input:
@@ -115,5 +115,12 @@ def load_data(fo_path, append=True, verbose=False):
             file_i = glob.glob(os.path.join(fo_path,ti,"*.dat"))[0]
             data_i = load_data_pandas(file_i)
             data = append_restart_data(data, data_i, verbose=verbose)
+
+    if(repeat>0):
+        cycle = (data.Time+start)//repeat
+        cycle =  cycle - cycle[0]
+        cycle.name = 'Cycle'
+        data = pd.concat([data,cycle], axis=1)
+        data.Time -= data.Cycle*repeat
 
     return data

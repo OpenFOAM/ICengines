@@ -15,7 +15,7 @@ test_case = Path('../pyaate/tests/test_data/openfoam_data/residuals_data')
 fo_file = Path(test_case, "postProcessing/residuals")
 
 # see function __doc__ string for argument explanation
-data = fo.load_data(fo_file, append=True, latest=True, verbose=False)
+data = fo.load_data(fo_file, append=True, verbose=False)
 
 print("Available variables:")
 print(data.columns.values)

@@ -23,16 +23,6 @@ class TestFoamFuncObjTools(unittest.TestCase):
         self.assertTrue(type(data) is pd.core.frame.DataFrame)
         # test actual numbers
 
-    def test_latest_file(self):
-        fo_dir = Path(test_case, "postProcessing", "test")
-        path = fo.get_latest_file(fo_dir, "test.dat", "0")
-        relevant_parts = list(path.parts)[-9:]
-        path_tail = Path(*relevant_parts)
-        path_ref = Path(
-            'pyaate', 'tests', 'test_data', 'openfoam_data', 'dummy_func_obj',
-            'postProcessing', 'test', '0', 'test_0.dat')
-        self.assertTrue(path_tail == path_ref)
-
     def test_appending(self):
 
         data0 = pd.DataFrame(
@@ -66,12 +56,11 @@ class TestFoamFuncObjTools(unittest.TestCase):
 
     def test_fo_loader(self):
 
-        fo_file = Path(test_case, "postProcessing/test/0/test.dat")
-
-        data = fo.load_data(fo_file, append=True, latest=True, verbose=False)
+        fo_file = Path(test_case, "postProcessing/test")
+        data = fo.load_data(fo_file, append=True, verbose=False)
         self.assertTrue(data.iloc[:, 1].values[1] == 1)
-        self.assertTrue(data.iloc[:, 1].values[2] == 20)
-        self.assertTrue(data.iloc[:, 1].values[5] == 5)
+        self.assertTrue(data.iloc[:, 1].values[2] == 2)
+        self.assertTrue(data.iloc[:, 1].values[5] == 6)
 
 
 class TestFoamDictionaries(unittest.TestCase):

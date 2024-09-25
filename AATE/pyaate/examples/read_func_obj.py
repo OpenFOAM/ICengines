@@ -39,10 +39,7 @@ test_case = Path('../pyaate/tests/test_data/openfoam_data/pressure_data')
 fo_file = Path(test_case, "pTAvg")
 data = fo.load_data(fo_file, repeat=720, start=-360)
 
-# Break the data into cycles
-cycles = [group for _, group in data.groupby('Cycle')]
-
-for cycle in cycles:
+for cycle in data:
     plt.plot(cycle.Time, cycle['volAverage(p)'], label="Cycle: {}".format(np.max(cycle.Cycle)))
 
 plt.xlabel("CAD")

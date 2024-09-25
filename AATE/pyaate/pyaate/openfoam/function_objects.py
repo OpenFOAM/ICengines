@@ -122,5 +122,6 @@ def load_data(fo_path, append=True, verbose=False, repeat=0, start=0):
         cycle =  cycle - cycle[0]
         cycle.name = 'Cycle'
         data = pd.concat([data,cycle], axis=1)
+        data = [group for _, group in data.groupby('Cycle')]
 
     return data

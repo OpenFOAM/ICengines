@@ -23,7 +23,7 @@ def last_header_line(fo_file):
                 header = line
             else:
                 break #stop when there are no more #
-    return header[1:].strip().split()
+    return [col.strip() for col in header[1:].strip().split('\t')]
 
 
 def load_data_pandas(fo_file):

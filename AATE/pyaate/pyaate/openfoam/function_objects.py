@@ -35,7 +35,7 @@ def load_data_pandas(fo_file):
         data type pd.core.frame.DataFrame
     """
     header = last_header_line(fo_file)
-    data = pd.read_csv(fo_file, delimiter="\s+", comment='#', names=header)
+    data = pd.read_csv(fo_file, delimiter=r"\t", comment='#', names=header, engine='python')
     return data
 
 

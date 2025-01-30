@@ -330,8 +330,7 @@ def write_injection_model(t, vfr, duration, mass_total, liquid_density, d, p_inj
             ' Injection velocity (w.r.t. maximum mass flow rate): %.1f m/s\n' %
             (u_max))
         f.write(comment)
-        f.write(
-            '\*---------------------------------------------------------------------------*/\n\n')
+        f.write(r'/*---------------------------------------------------------------------------*/\n\n')
         f.write('massTotal       %.4fe-6;\n' % (mass_total * 1e6))
         f.write('dInner          0.0;\n')
         f.write('dOuter          %.4fe-6;\n' % (d * 1e6))
@@ -344,46 +343,77 @@ def write_injection_model(t, vfr, duration, mass_total, liquid_density, d, p_inj
         f.write(');\n')
 
 
-def write_hole_info(nozzle_pos, hole_pos_rad, inj_directions, flow_rate_file="$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"):
+def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"):
     '''
     Assuming the following structure for the sprayCloudDict in OpenFOAM:
     - __injector__ refers to a user defined common property sub-dictionary
     - #include refers to the rate-of-injection table generated above as well.
     - inputs:
-    - nozzle_pos: central position of the injector
-    - hole_pos_rad: radius at which the numerical injection location is
-                    from the central injector position
+    - injector: injector object, which contains the central position (nozzle_pos)
+      and radius at which numerical injection location is from central position (hole_pos_rad)
     - inj_directions: MxN array with M holes and N direction vectors.
     - outputs:
-    injectorHole0
+
+    __injector__
     {
-        $:__injector__
-        position        (0 2e-3 -4e-3);
-        direction       (0 1 -0.25);
+        $__injector__
+        position    (0 0 0);
+        direction    (0 0 1);
         #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
+
+        SOI -10;
+        EOI 15.5;
+        distance 0.04;
+        position2 #calc $<vector>position + $distance * $<vector>direction;
+        radius1 0.002;
+        radius2 0.012;
+    }
+
+    injectorHole1
+    {
+        $__injector__
+        position    (0.10260448833758798 0.2010788143924715 -0.201026060429977);
+        direction   (0.8681627791959909 0.3596047974904981 -0.34202014332566877);
+        position2 #calc $<vector>position + $distance * $<vector>direction;
     }
     '''
+
     inj_directions = np.atleast_2d(inj_directions)
     n_holes = inj_directions.shape[0]
 
     with open("nozzleHoles.foam", 'w') as f:
+        f.write(("numberOfHoles " + str(n_holes)) + ";\n\n")
+        f.write(("__injector__\n"))
+        f.write("{\n")
+        f.write("    $__injector__" + "\n")
+        f.write("    position    (0 0 0);\n")
+        f.write("    direction    (0 0 1);\n")
+        f.write("    #include \"" + flow_rate_file + "\"\n\n")
+        f.write("    SOI "+ str(injector.SOI) + ";\n")
+        f.write("    EOI "+ str(injector.EOI) + ";\n")
+        f.write("    distance "+ str(injector.distance) + ";\n")
+        f.write("    position2 #calc $<vector>position + $distance * $<vector>direction;\n")
+        f.write("    radius1 "+ str(injector.radius1) + ";\n")
+        f.write("    radius2 "+ str(injector.radius2) + ";\n")
 
+
+
+        f.write("}\n\n")
         for i in range(n_holes):
             injDirI = inj_directions[i] / \
                 np.sqrt(inj_directions[i].dot(inj_directions[i]))
-            holeIPos = nozzle_pos + injDirI * hole_pos_rad
+            holeIPos = injector.position + injDirI * injector.hole_pos_r
 
-            f.write(("injectorHole" + str(i)) + "\n")
+            f.write(("injectorHole" + str(i+1)) + "\n")
             f.write("{\n")
-            f.write("    $:__injector__" + "\n")
+            f.write("    $__injector__" + "\n")
             f.write(
                 "    position    (" + str(holeIPos[0]) + " " + str(holeIPos[1]) +
                 " " + str(holeIPos[2]) + ");\n")
             f.write(
                 "    direction   (" + str(injDirI[0]) + " " + str(injDirI[1]) +
                 " " + str(injDirI[2]) + ");\n")
-
-            f.write("    #include \"" + flow_rate_file + "\"\n")
+            f.write("    position2 #calc $<vector>position + $distance * $<vector>direction;\n")
 
             f.write("}\n\n")
 

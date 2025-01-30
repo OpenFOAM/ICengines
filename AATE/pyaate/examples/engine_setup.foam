@@ -1,4 +1,4 @@
-// Units: 
+// Units:
 // - length [m]
 // - pressure [Pa]
 // - spatial angle [deg]
@@ -58,4 +58,10 @@ injector
     EOI    15.5;
     Cd    0.9;
     totalMass   100.0e-6;
+
+    // For refinement in snappyHexMeshDict
+    distance 0.04;
+    radius1 0.002;
+    radius2 0.012;
+
 }

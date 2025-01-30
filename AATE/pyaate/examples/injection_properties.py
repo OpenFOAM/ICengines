@@ -46,5 +46,5 @@ inj_dirs = injector.get_injection_directions(
     np.array((1, 0.41421356237309503)), plot=True)
 
 foam.write_hole_info(
-    injector.position, injector.hole_pos_r, inj_dirs,
+    injector, inj_dirs,
     "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam")

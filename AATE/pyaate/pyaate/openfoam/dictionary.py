@@ -343,7 +343,7 @@ def write_injection_model(t, vfr, duration, mass_total, liquid_density, d, p_inj
         f.write(');\n')
 
 
-def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"):
+def write_hole_info(injector, inj_directions, flow_rate_file=None):
     '''
     Assuming the following structure for the sprayCloudDict in OpenFOAM:
     - __injector__ refers to a user defined common property sub-dictionary
@@ -387,7 +387,11 @@ def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constan
         f.write("{\n")
         f.write("    position    (0 0 0);\n")
         f.write("    direction    (0 0 1);\n")
-        f.write("    #include \"" + flow_rate_file + "\"\n\n")
+
+        # Conditionally add the flow rate file if provided
+        if flow_rate_file:
+            f.write("    #include \"" + flow_rate_file + "\"\n\n")
+
         f.write("    SOI "+ str(injector.SOI) + ";\n")
         f.write("    EOI "+ str(injector.EOI) + ";\n")
         f.write("    distance "+ str(injector.distance) + ";\n")

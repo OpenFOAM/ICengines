@@ -369,7 +369,7 @@ def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constan
         radius2 0.012;
     }
 
-    injectorHole1
+    nozzleHole1
     {
         $__injector__
         position    (0.10260448833758798 0.2010788143924715 -0.201026060429977);
@@ -403,7 +403,7 @@ def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constan
                 np.sqrt(inj_directions[i].dot(inj_directions[i]))
             holeIPos = injector.position + injDirI * injector.hole_pos_r
 
-            f.write(("injectorHole" + str(i+1)) + "\n")
+            f.write(("nozzleHole" + str(i+1)) + "\n")
             f.write("{\n")
             f.write("    $__injector__" + "\n")
             f.write(

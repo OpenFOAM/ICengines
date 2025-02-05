@@ -68,32 +68,30 @@ class LiquidInjector:
 
         if(plot is True):
             origin = np.zeros(self.n_holes)
-            plt.figure(1)
-            plt.quiver(
-                origin, origin, dirVecs[:, 0],
-                dirVecs[:, 1],
+            # First figure: Top view
+            fig1, ax1 = plt.subplots()
+            ax1.quiver(
+                origin, origin, dirVecs[:, 0], dirVecs[:, 1],
                 angles='xy', scale_units='xy', scale=40)
-            plt.axis('scaled')
-            plt.xticks([])
-            plt.yticks([])
-            plt.title("Top view")
+            ax1.set_aspect('equal')  # Instead of 'scaled'
+            ax1.set_xticks([])
+            ax1.set_yticks([])
+            ax1.set_title("Top view")
+            fig1.savefig('injection_topview.png')
 
-            origin = np.zeros(2)
-            dirVecs_z = np.zeros((2, 2))
-            dirVecs_z[0][0] = 1.0
-            dirVecs_z[1][0] = 1.0
-            dirVecs_z[1][1] = dirVecs[0, 2]
+            # Second figure: Umbrella angle view
+            fig2, ax2 = plt.subplots()
+            origin_2 = np.zeros(2)
+            dirVecs_z = np.array([[1.0, 0.0], [1.0, dirVecs[0, 2]]])
 
-            plt.figure(2)
-            plt.quiver(
-                origin, origin, dirVecs_z[:, 0],
-                dirVecs_z[:, 1],
+            ax2.quiver(
+                origin_2, origin_2, dirVecs_z[:, 0], dirVecs_z[:, 1],
                 angles='xy', scale_units='xy', scale=40)
-            plt.axis('scaled')
-            plt.xticks([])
-            plt.yticks([])
-            plt.title("Umbrella angle view")
-
+            ax2.set_aspect('equal')
+            ax2.set_xticks([])
+            ax2.set_yticks([])
+            ax2.set_title("Umbrella angle view")
+            fig2.savefig('injection_umbrellaview.png')
             plt.show()
 
         return dirVecs

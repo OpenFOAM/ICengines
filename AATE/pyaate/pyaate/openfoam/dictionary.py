@@ -354,9 +354,9 @@ def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constan
     - inj_directions: MxN array with M holes and N direction vectors.
     - outputs:
 
+    numberOfHoles 1;
     __injector__
     {
-        $__injector__
         position    (0 0 0);
         direction    (0 0 1);
         #include "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam"
@@ -385,14 +385,13 @@ def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constan
         f.write(("numberOfHoles " + str(n_holes)) + ";\n\n")
         f.write(("__injector__\n"))
         f.write("{\n")
-        f.write("    $__injector__" + "\n")
         f.write("    position    (0 0 0);\n")
         f.write("    direction    (0 0 1);\n")
         f.write("    #include \"" + flow_rate_file + "\"\n\n")
         f.write("    SOI "+ str(injector.SOI) + ";\n")
         f.write("    EOI "+ str(injector.EOI) + ";\n")
         f.write("    distance "+ str(injector.distance) + ";\n")
-        f.write("    position2 #calc $<vector>position + $distance * $<vector>direction;\n")
+        f.write('    position2   #calc "$<vector>position + $distance * $<vector>direction";\n')
         f.write("    radius1 "+ str(injector.radius1) + ";\n")
         f.write("    radius2 "+ str(injector.radius2) + ";\n")
 
@@ -413,8 +412,7 @@ def write_hole_info(injector, inj_directions, flow_rate_file="$FOAM_CASE/constan
             f.write(
                 "    direction   (" + str(injDirI[0]) + " " + str(injDirI[1]) +
                 " " + str(injDirI[2]) + ");\n")
-            f.write("    position2 #calc $<vector>position + $distance * $<vector>direction;\n")
-
+            f.write('    position2   #calc "$<vector>position + $distance * $<vector>direction";\n')
             f.write("}\n\n")
 
 

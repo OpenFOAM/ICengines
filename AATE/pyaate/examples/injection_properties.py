@@ -47,4 +47,4 @@ inj_dirs = injector.get_injection_directions(
 
 foam.write_hole_info(
     injector, inj_dirs,
-    "$FOAM_CASE/constant/volumeFlowRate_singlehole.foam")
+    "nozzleHoles.foam")

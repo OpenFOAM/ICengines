@@ -343,7 +343,7 @@ def write_injection_model(t, vfr, duration, mass_total, liquid_density, d, p_inj
         f.write(');\n')
 
 
-def write_hole_info(injector, inj_directions, flow_rate_file=None):
+def write_hole_info(injector, inj_directions, output_file, flow_rate_file=None):
     '''
     Assuming the following structure for the sprayCloudDict in OpenFOAM:
     - __injector__ refers to a user defined common property sub-dictionary
@@ -352,6 +352,8 @@ def write_hole_info(injector, inj_directions, flow_rate_file=None):
     - injector: injector object, which contains the central position (nozzle_pos)
       and radius at which numerical injection location is from central position (hole_pos_rad)
     - inj_directions: MxN array with M holes and N direction vectors.
+    - output_file: Name of the file where the nozzle hole data will be written.
+    - flow_rate_file: Optional, if provided, the file will be included in the output.
     - outputs:
 
     numberOfHoles 1;
@@ -381,7 +383,7 @@ def write_hole_info(injector, inj_directions, flow_rate_file=None):
     inj_directions = np.atleast_2d(inj_directions)
     n_holes = inj_directions.shape[0]
 
-    with open("nozzleHoles.foam", 'w') as f:
+    with open(output_file, 'w') as f:
         f.write(("numberOfHoles " + str(n_holes)) + ";\n\n")
         f.write(("__injector__\n"))
         f.write("{\n")

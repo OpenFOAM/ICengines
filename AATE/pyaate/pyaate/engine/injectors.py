@@ -9,9 +9,9 @@ class LiquidInjector:
     def __init__(self, injector_dict):
         self.name = injector_dict['name']
         self.position = injector_dict['position']
-        self.distance = injector_dict['distance']
-        self.radius1 = injector_dict['radius1']
-        self.radius2 = injector_dict['radius2']
+        self.distance = injector_dict.get('distance', 0)
+        self.radius1 = injector_dict.get('radius1', 0)
+        self.radius2 = injector_dict.get('radius2', 0)
         self.hole_pos_r = injector_dict['holePositionRadius']
         self.n_holes = injector_dict['nHoles']
         self.d = injector_dict['holeDiamater']

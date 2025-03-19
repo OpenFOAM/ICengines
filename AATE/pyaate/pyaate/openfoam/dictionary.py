@@ -89,11 +89,7 @@ def read_dict(foam_file: Path, python_types: bool = False, decoder: str = 'utf-8
 
     if expand:
         new_file = foam_file.with_suffix(foam_file.suffix + ".expanded")
-        with open(str(new_file), 'w') as file:
-            _ = subprocess.call(
-                ['foamDictionary', '-expand', str(foam_file)],
-                stdout=file)
-
+        subprocess.call(['foamDictionary', '-expand', str(foam_file), '-output', str(new_file)])
         foam_file = new_file
 
     keywords = subprocess.check_output(['foamDictionary', '-keywords', str(foam_file)],stderr=subprocess.STDOUT).splitlines()

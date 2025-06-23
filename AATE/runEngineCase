@@ -75,20 +75,12 @@ if [ "$MESH_TYPE" = "snappy" ]; then
 
 else
     # Clone case and prepare for GridPro mesh
-    cp -r ../meshes/GridPro/$MESH_TYPE/meshToMesh_* constant/
-    cp -r ../meshes/GridPro/meshTimes_$MESH_TYPE constant/meshTimes
-
-    # Check if each meshToMesh_x folder exists for each mesh mapping instance in meshTimes
-    awk '{print $1}' constant/meshTimes | while read -r map; do
-        if [ ! -d "constant/meshToMesh_$map" ]; then
-            echo "Error: Folder meshToMesh_$map does not exist for mesh instance $map in meshTimes_$MESH_TYPE"
-            exit 1
-        fi
-    done
+    cp -r ../meshes/GridPro/$MESH_TYPE/* constant/meshes/
+    ls constant/meshes | sort -n > constant/meshTimes
 fi
 
 # Copy start time mesh and initial conditions
-cp -r constant/meshToMesh_0/polyMesh constant/
+cp -r constant/meshes/0/polyMesh constant/
 
 # Set number of subdomains
 foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
@@ -98,8 +90,8 @@ runApplication decomposePar -noFunctionObjects
 
 # Alternative to the for loop below, you can also use the following (requires gnu-parallel):
 # cat constant/meshTimes | parallel  --memfree 1G -j 10 decomposePar -region meshToMesh_{} -noFunctionObjects
-for meshDir in constant/meshToMesh_*; do
-    runApplication -a decomposePar -region "$(basename "$meshDir")" -noFunctionObjects
+for meshDir in constant/meshes/*; do
+    runApplication -a decomposePar -mesh "$(basename "$meshDir")" -noFunctionObjects
 done
 
 runParallel $(getApplication)

@@ -26,9 +26,16 @@ fi
 times="$(cat meshTimes_$MESH_TYPE | xargs)"
 
 for t in $times; do
-    pack="$MESH_TYPE/meshToMesh_$t"
-    [ ! -d "$pack/polyMesh" ] && mkdir -p "$MESH_TYPE" && curl "$domain/$MESH_TYPE/meshToMesh_$t.txz" | tar xJf - -C "$MESH_TYPE/"
+    target="$MESH_TYPE/$t"
+    if [ ! -d "$target/polyMesh" ]; then
+        mkdir -p "$MESH_TYPE"
+        tmpdir=$(mktemp -d)
+        curl "$domain/$MESH_TYPE/meshToMesh_$t.txz" | tar xJf - -C "$tmpdir"
+        mv "$tmpdir/meshToMesh_$t" "$target"
+        rm -rf "$tmpdir"
+    fi
 done
+
 
 echo -e "\e[32m$MESH_TYPE GridPro meshes are ready for use.\e[0m"
 #------------------------------------------------------------------------------

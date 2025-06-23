@@ -95,4 +95,8 @@ fluidMaxDeltaT
         outOfBounds     repeat;
     }
 }
+
+#includeFunc faceZoneFlowRate(name=exhaustValveFlowRate, faceZone=exhaustValveFaceZone)
+#includeFunc faceZoneFlowRate(name=intakeValveFlowRate, faceZone=intakeValveFaceZone)
+
 // ************************************************************************* //

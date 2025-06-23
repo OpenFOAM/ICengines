@@ -14,20 +14,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-limitT
-{
-     type            limitTemperature;
-     selectionMode   all;
-     min             200;
-     max             3000;
-}
-
-limitp
-{
-    type            limitPressure;
-    selectionMode   all;
-    min             1e4;
-    max             1e30;
-}
+#includeConstraint limitTemperature(min=200, max=3000)
+#includeConstraint limitPressure(min=1e4, max=1e30, minFactor=1, maxFactor=2)
 
 // ************************************************************************* //

@@ -1,0 +1,57 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      zonesGenerator;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+combustionChamber
+{
+    type        cylinder;
+    zoneType    cell;
+    point1  (0 0 0.002);
+    point2  (0 0 -1000);
+    radius  0.2;
+}
+
+intakePort
+{
+    type        box;
+    zoneType    cell;
+    min     (-0.06 -0.04 0.002);
+    max     (0.011 -0.015 0.08);
+}
+
+exhaustPort
+{
+    $intakePort
+    min     (-0.011 0.015 0.002);
+    max     (0.06 0.04 0.08);
+}
+
+exhaustValveFaceZone
+{
+    type    plane;
+    point   (0 0.028 0.005);
+    normal  (0 0 1);
+    moveUpdate  true;
+    include closest;
+}
+
+intakeValveFaceZone
+{
+    $exhaustValveFaceZone
+    point   (0 -0.028 0.005);
+}
+
+
+// ************************************************************************* //

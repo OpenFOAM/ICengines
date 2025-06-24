@@ -49,6 +49,14 @@ FoamFile
     select=cellZone,
     cellZone=combustionChamber
 )
+
+#includeFunc    volIntegrate(
+    fields=(rho),
+    select=cellZone,
+    cellZone=combustionChamber,
+    name=trappedMass
+)
+
 #includeFunc stopAtTimeStep(minDeltaT=1e-12, action=writeNow)
 fluidMaxDeltaT
 {

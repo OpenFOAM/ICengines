@@ -54,7 +54,7 @@ mover
 
         travelInterval #calc "$motion/stroke * 0.05";
 
-        cosineScaling       yes;
+        cosineScale       0.5;
         movingFrozenLayerThickness   1e-4;
 
     }

@@ -21,7 +21,7 @@ Users can download these meshes and run the engine simulation with them followin
 1. Download the meshes to your computer by executing the following command:
     ```bash
     cd meshes/GridPro/
-    ./downloadGridProMeshes <coarse|fine>
+    ./downloadMeshes <coarse|fine>
     ```
 
 2. Run the case using the downloaded meshes:

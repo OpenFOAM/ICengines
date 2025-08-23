@@ -75,7 +75,19 @@ if [ "$MESH_TYPE" = "snappy" ]; then
 
 else
     # Clone case and prepare for GridPro mesh
+    if [ ! -d "../meshes/GridPro/$MESH_TYPE" ]; then
+        echo "Error: GridPro mesh directory ../meshes/GridPro/$MESH_TYPE not found"
+        exit 1
+    fi
+
+    mkdir -p constant/meshes
     cp -r ../meshes/GridPro/$MESH_TYPE/* constant/meshes/
+
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to copy mesh files"
+        exit 1
+    fi
+    
     ls constant/meshes | sort -n > constant/meshTimes
 fi
 

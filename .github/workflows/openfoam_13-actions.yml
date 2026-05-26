@@ -2,7 +2,9 @@ name: ICengines build - OpenFOAM-13 tagged version
 run-name: ${{ github.actor }} is building ICengines on latest tagged OpenFOAM-13 installation
 on:
   push:
+    branches: [master]
   pull_request:
+    branches: [master]
 
 jobs:
   compile:

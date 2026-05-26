@@ -1,0 +1,28 @@
+name: ICengines build - OpenFOAM-dev tagged version
+run-name: ${{ github.actor }} is building ICengines on latest tagged OpenFOAM-dev installation
+on:
+  push:
+  pull_request:
+
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install OpenFOAM-dev
+        run: |
+          sudo sh -c "wget -O - https://dl.openfoam.org/gpg.key > /etc/apt/trusted.gpg.d/openfoam.asc"
+          sudo add-apt-repository http://dl.openfoam.org/ubuntu
+          sudo add-apt-repository "http://dl.openfoam.org/ubuntu dev"
+          sudo apt-get update
+          sudo apt-get install -y openfoam-dev
+
+      - name: Display OpenFOAM version
+        run: |
+          bash -c "source /opt/openfoam-dev/etc/bashrc && echo 'OpenFOAM version:' \$WM_PROJECT_VERSION && echo 'OpenFOAM directory:' \$WM_PROJECT_DIR && which wmake"
+
+      - name: Compile with Allwmake
+        run: |
+          bash -c "source /opt/openfoam-dev/etc/bashrc && chmod +x Allwmake && ./Allwmake"

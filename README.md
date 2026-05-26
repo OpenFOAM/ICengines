@@ -28,7 +28,6 @@ The repository follows the standard OpenFOAM structure:
 - `applications/utilities/` - Contains all utilities.
 - `src/` - Contains all library code.
 - `tutorials/` - Contains detailed tutorials to test the utilities.
-- `applications/test/` - Contains tests for all library functions and classes.
 - `bin` - Contains bash utility scripts
 
 ## Contributing

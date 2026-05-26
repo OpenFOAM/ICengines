@@ -10,27 +10,33 @@ OMP_NUM_THREADS=4
 NSLOTS="${NSLOTS:-36}"
 foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
 
-./downloadGeometry
-
-# Predict remeshing instants
-runApplication -o predictRemeshInstants
-
-# Setup STL surfaces in the predict remesh instants directory
-runApplication -o moveSurfaces
-
-# Write blockMeshDict, SnappyHexMeshDict, and meshQualityDict in the instants directory
-runApplication -o engineMeshConfig
-
-# Submit job script on the cluster to generate mesh
-cat constant/meshTimes | xargs -I{} generateMesh -sge -cores $NSLOTS -mesh {}
+tar -xzf constant/geometry.tar.gz -C constant
 
 # Use these commands to generate meshes for selected instants
 # Recommended for building meshes for the first time from scratch
 
 #runApplication -o moveSurfaces  -times '(0 135 136)'
 #runApplication -o engineMeshConfig -times '(0 135 136)'
-#generateMesh -sge -mesh 0
-#generateMesh -sge -mesh 135
-#generateMesh -sge -mesh 136
+#generateMesh -cores $NSLOTS -mesh 0
+#generateMesh -cores $NSLOTS -mesh 135
+#generateMesh -cores $NSLOTS -mesh 136
+
+
+# Full workflow below, recommended for regenerating meshes after
+# modifying the mesh configuration or predict remesh instants
+
+# Predict remeshing instants
+#runApplication -o predictRemeshInstants
+
+# Setup STL surfaces in the predict remesh instants directory
+#runApplication -o moveSurfaces
+
+# Write blockMeshDict, SnappyHexMeshDict, and meshQualityDict in the instants directory
+#runApplication -o engineMeshConfig
+
+# Submit job script on the cluster to generate mesh
+#cat constant/meshTimes | xargs -I{} generateMesh -slurm -cores $NSLOTS -mesh {}
+
+
 
 #------------------------------------------------------------------------------

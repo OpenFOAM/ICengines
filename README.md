@@ -51,10 +51,7 @@ Link: https://deepblue.lib.umich.edu/handle/2027.42/108382
 This workflow is based solely on snappyHexMesh. No external meshing tool is required.
 
 Important notes:
-
-- Fine mesh simulations require substantial compute resources.
 - Generated snappy meshes can exceed 1.5M cells and may take significant time in serial.
-- `runEngineCase`-style scripts can be adapted for SLURM workflows.
 
 ## Repository Structure
 The repository follows a standard OpenFOAM-style structure:

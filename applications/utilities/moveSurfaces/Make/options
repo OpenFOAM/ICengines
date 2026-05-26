@@ -1,0 +1,15 @@
+EXE_INC = \
+    -I$(LIB_SRC)/surfMesh/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/fvMeshMovers/multiValveEngine/lnInclude \
+    -I../../../src/preProcessing/lnInclude
+
+EXE_LIBS = \
+    -lsurfMesh \
+    -lmeshTools \
+    -lfvMeshMoversMultiValveEngine \
+    -L$(FOAM_USER_LIBBIN) -lpreProcessing
+
+# OpenMP flags
+c++FLAGS += -fopenmp
+ldFLAGS  += -fopenmp

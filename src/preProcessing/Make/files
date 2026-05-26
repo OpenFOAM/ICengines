@@ -1,0 +1,7 @@
+geometryMotion/geometryMotion/geometryMotion.C
+geometryMotion/geometryMotion/geometryMotionNew.C
+geometryMotion/translationMotion/translationMotion.C
+geometryMotion/scalingMotion/scalingMotion.C
+geometryMotion/valveMotion/valveMotion.C
+
+LIB = $(FOAM_USER_LIBBIN)/libpreProcessing

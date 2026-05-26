@@ -1,0 +1,60 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      functions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#includeFunc    userTimeStep
+#includeFunc    time(name=cpuTime, perTimeStep=yes)
+#includeFunc    multiValveEngineState
+#includeFunc    checkMesh(executeControl=adjustableRunTime, executeInterval=5)
+#includeFunc    cutPlaneSurface
+(
+    name=chamber,
+    writeControl=adjustableRunTime,
+    writeInterval=5,
+    point=(0 0 0),
+    normal=(1 0 0),
+    interpolate=true,
+    fields=(p T U tracer)
+)
+
+#includeFunc    scalarTransport(tracer)
+
+#includeFunc    volAverage(
+    name=pTAvg_chamber,
+    fields=(p T),
+    select=cellZone,
+    cellZone=chamber
+)
+
+#includeFunc    volAverage(name=Umean, U)
+
+massFlowRate
+{
+    type            surfaceFieldValue;
+    libs            ("libfieldFunctionObjects.so");
+    writeControl    timeStep;
+    writeInterval   1;
+    log             yes;
+    writeFields     no;
+    patch           outlet;
+    operation       sum;
+    fields          ( phi );
+
+}
+
+#includeFunc    volIntegrate(
+    fields=(rho),
+    name=totalMass
+)
+// ************************************************************************* //

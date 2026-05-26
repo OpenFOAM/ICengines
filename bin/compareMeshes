@@ -1,0 +1,100 @@
+#!/bin/bash
+
+if [[ "$1" == "-help" ]]; then
+    echo -e "compareMeshes - Compares mesh configurations against a reference mesh.\n"
+    echo -e "Usage:"
+    echo -e "  compareMeshes [--referenceMesh <mesh_name>] [--region <region_name>]\n"
+    echo -e "Options:"
+    echo -e "  -referenceMesh <mesh_name>   Specify the reference mesh to compare against. This is a required option."
+    echo -e "  -region <region_name>        Specify a region to check (optional). If not provided, the default path is used."
+    echo -e "  -h, --help                    Show this help message and exit.\n"
+    echo -e "Description:"
+    echo -e "  This utility compares the boundary keyword configurations of all meshes in the directory"
+    echo -e "  against a specified reference mesh. The user can optionally specify a region for comparison."
+    echo -e "  If no region is specified, the comparison will be done using the default path. The utility"
+    echo -e "  prints out a success message if all meshes match the reference, and reports any discrepancies."
+    exit 0
+fi
+
+
+# Default values
+MESH_DIR="constant/meshes"
+REFERENCE_MESH=""
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -referenceMesh)
+            REFERENCE_MESH="$2"
+            shift 2
+            ;;
+        -region)
+            REGION="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Check if -referenceMesh is specified
+if [[ -z "$REFERENCE_MESH" ]]; then
+    echo "Error: -referenceMesh must be specified."
+    exit 1
+fi
+
+
+# Temporary file to store keywords output
+TEMP_DIR="/tmp/mesh_keywords_outputs"
+mkdir -p "$TEMP_DIR"
+
+# Extract keywords for the reference mesh
+if [[ -n "$REGION" ]]; then
+    REFERENCE_OUTPUT=$(foamDictionary "constant/meshes/$REFERENCE_MESH/$REGION/polyMesh/boundary" -entry entry0 -keywords 2>/dev/null)
+else
+    REFERENCE_OUTPUT=$(foamDictionary "constant/meshes/$REFERENCE_MESH/polyMesh/boundary" -entry entry0 -keywords 2>/dev/null)
+fi
+
+if [[ $? -ne 0 ]]; then
+    echo "Failed to extract keywords for the reference mesh: $REFERENCE_MESH"
+    exit 1
+fi
+
+# Iterate over all mesh directories
+ALL_GOOD=true
+for MESH_PATH in "$MESH_DIR"/*; do
+    if [[ -d "$MESH_PATH" && "$MESH_PATH" != "constant/meshes/0" ]]; then
+        # Extract the keywords using foamDictionary
+        # Extract keywords for the reference mesh
+        if [[ -n "$REGION" ]]; then
+            OUTPUT=$(foamDictionary "$MESH_PATH/$REGION/polyMesh/boundary" -entry entry0 -keywords 2>/dev/null)
+        else
+            OUTPUT=$(foamDictionary "$MESH_PATH/polyMesh/boundary" -entry entry0 -keywords 2>/dev/null)
+        fi
+
+
+        # Check if foamDictionary succeeded
+        if [[ $? -eq 0 ]]; then
+            MESH_NAME=$(basename "$MESH_PATH")
+
+            # Compare with the reference
+            if [[ "$OUTPUT" != "$REFERENCE_OUTPUT" ]]; then
+                echo -e "\033[0;31mMesh $MESH_NAME differs from the reference.\033[0m"
+                ALL_GOOD=false
+            fi
+        else
+            echo "Failed to extract keywords for $MESH_PATH. Skipping..."
+            ALL_GOOD=false
+        fi
+    fi
+done
+
+# Print final status
+if $ALL_GOOD; then
+    echo -e "\033[0;32mAll the meshes have the same number of patches, in same ordering!\033[0m"
+fi
+
+# Clean up temporary files
+rm -rf "$TEMP_DIR"

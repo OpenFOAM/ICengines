@@ -1,0 +1,51 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+mover
+{
+    type                                multiValveEngine;
+    libs                                ( "libfvMeshMoversMultiValveEngine.so" );
+    slidingPatches                      (liner);
+    linerPatches                        (liner);
+    piston
+    {
+        patches                         (piston);
+        axis                            ${engineDict!patches/piston/geometryMotion/axis};
+        motion
+        {
+            ${engineDict!patches/piston/geometryMotion/motion};
+        }
+
+        frozenZones                     (cylinderHead coneRefinement);
+        movingZones                     (pistonBowl);
+
+        movingFrozenLayerThickness      0.0001;
+        travelInterval                  #calc "$motion/stroke * 0.05";
+        cosineScale   0.8;
+    }
+}
+
+topoChanger
+{
+    type                                 meshToMesh;
+    libs                                ( "libmeshToMeshTopoChanger.so" );
+    times                               ( #include "$FOAM_CASE/constant/meshTimes" );
+    repeat                              720;
+    timeDelta                           1e-06;
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,60 @@
+#includeEtc "caseDicts/functions/surface/surface.cfg"
+writeControl    adjustableRunTime;
+writeInterval   2;
+surfaceFormat       vtk;
+fields              (p T U rho tracer);
+surfaces
+{
+    xNormal
+    {
+        type               cuttingPlane;
+        point (0 0 0);
+        normal (1 0 0);
+        interpolate        true;
+    }
+
+    yNormal
+    {
+        type               cuttingPlane;
+        point (0 0 0);
+        normal (0 1 0);
+        interpolate        true;
+    }
+
+    intakePort
+    {
+        type               cuttingPlane;
+        point   (0 0.03 0);
+        normal  (0 1 0);
+        interpolate        true;
+    }
+
+    exhaustPort
+    {
+        type               cuttingPlane;
+        point   (0 -0.03 0);
+        normal  (0 1 0);
+        interpolate        true;
+    }
+
+    zNormal5
+    {
+        type               cuttingPlane;
+        point   (0 0 -0.05);
+        normal (0 0 1);
+        interpolate        true;
+    }
+
+    zNormal30
+    {
+        type               cuttingPlane;
+        point   (0 0 -0.03);
+        normal (0 0 1);
+        interpolate        true;
+    }
+
+};
+
+
+
+

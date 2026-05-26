@@ -1,0 +1,267 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+# Script
+#     generateMesh
+#
+# Description
+#     Generate mesh using blockMesh and snappyHexMesh either locally
+#     or via a job scheduler (SGE or SLURM).
+#
+# Usage:
+#     generateMesh                    Run locally in current directory
+#     generateMesh -sge               Submit job to sge from current directory
+#     generateMesh 59.99              Run in constant/meshes/59.99 locally
+#     generateMesh -sge 59.99         Submit job in constant/meshes/59.99
+#     generateMesh -mesh 90           Same as above (local)
+#     generateMesh -sge -mesh 90      Same as above (SGE)
+#     generateMesh -slurm -mesh 90    Same as above (SLURM)
+#     SBATCH_PARTITION=debug SLURM_TIME=00:30:00
+#     SLURM_MEM_PER_CPU=2GB generateMesh -slurm -mesh 90
+#                                     Same as above but submit to debug
+#                                     partition with 2GB RAM per CPU
+#
+#------------------------------------------------------------------------------
+
+usage() {
+    cat <<USAGE
+
+Usage: ${0##*/} [OPTION] <MESH_TIME>
+options:
+  -sge              Submit mesh generation as SGE job
+  -slurm            Submit mesh generation as SLURM job
+  -debug            Output mesh generation script w/o submitting it
+  -cores <N>        Number of cores per job, range can be specified for SGE scheduler, i.e. 16-36 (default 36)
+  -mesh <TIME>      Specify the mesh time (e.g., 59.99 → constant/meshes/59.99)
+  -region <regionName>  Specify the region name for which the mesh is generated (e.g., FLUIDMAIN → constant/meshes/FLUIDMAIN/0)
+  -help, --help     Show this help message
+
+* generate mesh using blockMesh and snappyHexMesh either locally or via a job scheduler.
+
+USAGE
+}
+
+error() {
+    exec 1>&2
+    while [ "$#" -ge 1 ]; do
+        echo "Error: $1"
+        shift
+    done
+    usage
+    exit 1
+}
+
+# Default values
+MODE="local"
+MESH_TIME=""
+MESH_DIR=""
+WORK_DIR="${PWD}"
+NPROCS="36"
+REGION=""
+# ---------------- Define the mesh generation steps ------------------
+generateMeshSteps() {
+    local nProcs="${1}"
+
+    foamDictionary -entry numberOfSubdomains -set "${nProcs}" system/decomposeParDict
+
+    regionsToMerge=()
+
+    # Loop over all snappyHexMeshDict_* files in system/
+    for dictFile in system/snappyHexMeshDict_*; do
+        [ -f "$dictFile" ] || continue
+        regionName="${dictFile##*_}" # extract part after last underscore
+
+        echo "=== Generating mesh for region: $regionName ==="
+        runApplication -o -s "$regionName" blockMesh -dict system/blockMeshDict -region "$regionName"
+        runApplication -o -s "$regionName" decomposePar -region "$regionName"
+        runParallel -o -s "$regionName" snappyHexMesh -dict "$dictFile" -region "$regionName"
+        runParallel -o -s "$regionName" checkMesh -region "$regionName" -allGeometry -allTopology
+        runApplication -o -s "$regionName" reconstructPar -constant -region "$regionName"
+
+        # Collect region name unless it's main
+        if [ "$regionName" != "main" ]; then
+            regionsToMerge+=("$regionName")
+        fi
+    done
+
+    # Merge all collected regions into main
+    if [ "${#regionsToMerge[@]}" -gt 0 ]; then
+        runApplication -o mergeMeshes -addRegions "(${regionsToMerge[*]})" -region main
+
+        # Delete merged regions from constant/
+        for region in "${regionsToMerge[@]}"; do
+            echo "Deleting constant/$region"
+            rm -rf "constant/$region"
+        done
+    fi
+
+    # Move the main mesh to constant/polyMesh and delete main folder
+    mv constant/main/polyMesh constant/
+    rm -rf constant/main
+
+    # Reorder the patches with alphabetical order
+    runApplication -o reorderPatchesAndFaces \
+        -patchOrder "($(foamDictionary constant/polyMesh/boundary \
+            -entry entry0 -keywords | sort | tr '\n' ' '))"
+
+    # Run checkMesh on the final mesh
+    runApplication -o checkMesh
+
+    # Delete cellLevel and pointLevel because they are not compatible after merging
+    rm -rf constant/polyMesh/*Level
+
+    if [ -n "$MESH_TIME" ]; then
+        mv constant/polyMesh/ .
+    fi
+
+    # Delete constant, system, and processor folders
+    rm -rf processor*
+    rm -rf constant/
+    rm -rf system/
+    rm -rf dynamicCode/
+}
+
+# ---------------- Parse arguments ------------------
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -debug)
+        IS_DEBUG=true
+        shift
+        ;;
+
+    -sge)
+        MODE="sge"
+        CMD="qsub"
+        shift
+        ;;
+    -slurm)
+        MODE="slurm"
+        CMD="sbatch"
+        shift
+        ;;
+
+    -region)
+        REGION="$2"
+        shift 2
+        ;;
+
+    -mesh)
+        MESH_TIME="$2"
+        shift 2
+        ;;
+
+    -np | -n | -cores)
+        NPROCS="$2"
+        shift 2
+        ;;
+    -help | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        # Assume positional mesh time
+        if [[ -z "$MESH_TIME" ]]; then
+            MESH_TIME="$1"
+            MESH_DIR="constant/meshes/$MESH_TIME/$REGION"
+            shift
+        else
+            error "unknown option: '$1'"
+        fi
+        ;;
+    esac
+done
+
+if [ -n "$REGION" ]; then
+    MESH_DIR="constant/meshes/$MESH_TIME/$REGION"
+else
+    MESH_DIR="constant/meshes/$MESH_TIME"
+fi
+
+USE_SLURM=false
+if [ "$MODE" == "slurm" ]; then
+    USE_SLURM=true
+fi
+
+# Determine working directory
+if [ -n "$MESH_DIR" ]; then
+    WORK_DIR=$(realpath "${MESH_DIR}")
+fi
+
+if [ ! -d "$WORK_DIR" ]; then
+    error "directory $WORK_DIR does not exist."
+fi
+
+if [ "${IS_DEBUG}" = true ]; then
+    CMD="cat"
+fi
+
+# ---------------- Run job ------------------
+
+#: SLURM scheduler {{{
+if [ "$MODE" == "slurm" ]; then
+    [ "${IS_DEBUG}" = true ] ||
+        echo "Submitting SLURM job at $WORK_DIR using $NPROCS cores..."
+    [ -z ${SLURM_PARTITION+x} ] && ((NPROCS % 128 == 0)) &&
+        SLURM_PARTITION='standard'
+
+    $CMD <<EOF
+#!/usr/bin/env bash
+#SBATCH --chdir=$WORK_DIR
+#SBATCH --job-name=generateMesh_${MESH_TIME:-local}
+#SBATCH --account=${SBATCH_ACCOUNT:-project_462000885}
+#SBATCH --partition=${SBATCH_PARTITION:-small}
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=$NPROCS
+#SBATCH --mem-per-cpu=${SLURM_MEM_PER_CPU:-1750}
+#SBATCH --time=${SLURM_TIME:-01:00:00}
+#SBATCH --output=log.%j.out
+#SBATCH --error=log.%j.err
+echo "Utilizing \$SLURM_NTASKS cores"
+
+source "$FOAM_LIBBIN/../../lumi.env"
+. "${WM_PROJECT_DIR}/bin/tools/RunFunctions"
+
+MESH_TIME="$MESH_TIME"
+
+$(declare -f generateMeshSteps)
+generateMeshSteps \$SLURM_NTASKS
+EOF
+    exit 0
+#: }}}
+
+#: SGE scheduler {{{
+elif [ "$MODE" == "sge" ]; then
+    [ "${IS_DEBUG}" = true ] ||
+        echo "Submitting SGE job at $WORK_DIR using $NPROCS cores..."
+    $CMD <<EOF
+#!/usr/bin/env bash
+#$ -cwd
+#$ -N generateMesh_${MESH_TIME:-local}
+#$ -pe orte $NPROCS
+#$ -o log.\$JOB_ID.out
+#$ -e log.\$JOB_ID.err
+#$ -m n
+echo "Utilizing \$NSLOTS cores"
+
+source "$FOAM_LIBBIN/../../stargate.env"
+. "${WM_PROJECT_DIR}/bin/tools/RunFunctions"
+
+cd "$WORK_DIR"
+
+MESH_TIME="$MESH_TIME"
+
+$(declare -f generateMeshSteps)
+generateMeshSteps \$NSLOTS
+EOF
+    exit 0
+#: }}}
+
+#: No scheduler {{{
+else
+    . "${WM_PROJECT_DIR}/bin/tools/RunFunctions"
+    echo "=== Running mesh generation locally in $WORK_DIR ==="
+    (
+        cd "$WORK_DIR"
+        generateMeshSteps "${NPROCS}"
+    )
+fi
+#: }}}

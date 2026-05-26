@@ -1,0 +1,3 @@
+searchabletruncatedCone/truncatedCone_searchableSurface.C
+
+LIB = $(FOAM_USER_LIBBIN)/libsearchableSurfaces_w

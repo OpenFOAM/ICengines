@@ -1,0 +1,392 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      engineDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+times (#includeIfPresent "${FOAM_CASE}/constant/meshTimes");
+
+remeshControl
+{
+    startInstant              0;
+    endInstant              720;
+    stepSize                0.01;
+    forcedRemeshInstants    (0 180 360);
+}
+
+meshControl
+{
+    cellSize 0.004;
+    surfaceRefinement 2;
+
+    patchInfo
+    {
+        inGroups    staticWall;
+    }
+
+    insidePoints ((0.01 0 -0.005) (0.1 0.02 0.06) (-0.1 -0.02 0.06));
+
+    regionRefinement
+    {
+        chamber
+        {
+            type        cylinder;
+            point1      (0 0 0);
+            point2      (0 0 -1000);
+            radius      0.1;
+            level       1;
+        }
+        chamber_combustion
+        {
+            begin   700;
+            end     50;
+            repeat  720;
+            $chamber;
+            level   2;
+        }
+    }
+
+    layerControl
+    {
+        // Boundary layer control
+        addLayers   true;
+        nSurfaceLayers 2;
+        thickness 0.6;
+        expansionRatio    1.2;
+        minThickness    0.001;
+    }
+}
+
+patches
+{
+    piston
+    {
+        surfaces       (piston crevice_bottom crevice_side);
+
+        geometryMotion
+        {
+            type translationMotion;
+
+            axis   (0 0 1);
+            initialPosition 0.086;  // piston is at BDC
+
+            motion
+            {
+                type            crankConnectingRodMotion;
+                conRodLength    0.231;
+                stroke          0.086;
+            }
+
+            remeshControl
+            {
+                absTolerance                #calc "($motion/stroke)*0.25";
+                relTolerance                0.5;
+                clearance                   0.0095;
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 4;
+            layerControl
+            {
+                nSurfaceLayers 2;
+            }
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+            surfaceControl
+            {
+                "crevice_.*" { surfaceRefinement 5;}
+            }
+        }
+    }
+
+    intakePort
+    {
+        surfaces       (ip_port "ip_seat.*");
+    }
+
+    exhaustPort
+    {
+        surfaces       (ep_port "ep_seat.*");
+    }
+
+    liner
+    {
+        surfaces       (liner);
+
+        geometryMotion
+        {
+            type    scalingMotion;
+            axis    $piston/geometryMotion/axis;
+            initialPosition    $piston/geometryMotion/initialPosition;
+
+            motion
+            {
+                $piston/geometryMotion/motion;
+            }
+        }
+
+        meshControl
+        {
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+
+            layerControl
+            {
+                nSurfaceLayers 3;
+            }
+        }
+    }
+
+    iv_stem
+    {
+        surfaces       (iv_stem);
+
+        geometryMotion
+        {
+            type    valveMotion;
+            axis    (0 0 1);
+            minLift 0.0005;
+            initialPosition 0;
+
+            motion
+            {
+                type    repeat;
+                period  720;
+                value
+                {
+                    type            table;
+                    format          csv;
+                    file            "$FOAM_CASE/constant/engineData/intakeLift.txt";
+                    nHeaderLine     2;
+                    columns         ( 0 1 );
+                    separator       ";";
+                    mergeSeparators yes;
+                    outOfBounds     clamp;
+                    interpolationScheme linear;
+                }
+            }
+        }
+
+        meshControl
+        {
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+
+            layerControl
+            {
+                nSurfaceLayers 3;
+            }
+        }
+    }
+
+    iv_head
+    {
+        $iv_stem
+        surfaces       (iv_angle "iv_bottom.*" "iv_seat.*");
+        
+        geometryMotion
+        {
+            remeshControl
+            {
+                absTolerance    0.0015;
+                relTolerance    0.35;
+                forcedRemeshPositions
+                (
+                    $geometryMotion/minLift
+                    #calc "${geometryMotion/minLift}+1e-5"
+                );
+                clearance $geometryMotion/minLift;
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement   3;
+
+            surfaceControl
+            {
+                "iv_seat.*"
+                {
+                    dynamicRefinement   true;
+                    numberOfCells       5;
+                }
+            }
+        }
+
+        supportSurfaces
+        {
+            intakeSupportSurface
+            {
+                type        cylinder;
+                point1      (0  0.028 0.00034);
+                point2      (0  0.028 0.004);
+                radius      0.016;
+            }
+        }
+    }
+
+    ev_stem
+    {
+        surfaces       (ev_stem);
+
+        geometryMotion
+        {
+            type    valveMotion;
+            axis    (0 0 1);
+            minLift 0.0005;
+            initialPosition 0;
+
+            motion
+            {
+                type            scale;
+                scale           0.001;  // Scale the exhaust.txt from mm to m
+                value
+                {
+                    type    repeat;
+                    period  720;
+                    value
+                    {
+                        type            table;
+                        format          csv;
+                        file            "$FOAM_CASE/constant/engineData/exhaustLift.txt";
+                        nHeaderLine     2;
+                        columns         ( 0 1 );
+                        separator       ";";
+                        mergeSeparators yes;
+                        outOfBounds     clamp;
+                        interpolationScheme linear;
+                    }
+                }
+            }
+        }
+
+        meshControl
+        {
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+
+            layerControl
+            {
+                nSurfaceLayers 3;
+            }
+        }
+    }
+
+    ev_head
+    {
+        $ev_stem
+        surfaces       (ev_angle "ev_bottom.*" "ev_seat.*");
+        
+        geometryMotion
+        {
+            remeshControl
+            {
+                absTolerance    0.0015;
+                relTolerance    0.35;
+                forcedRemeshPositions
+                (
+                    $geometryMotion/minLift
+                    #calc "${geometryMotion/minLift}+1e-5"
+                );
+                clearance $geometryMotion/minLift;
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+
+            surfaceControl
+            {
+                "ev_seat.*"
+                {
+                    dynamicRefinement   true;
+                    numberOfCells       5;
+                }
+            }
+        }
+
+        supportSurfaces
+        {
+            exhaustSupportSurface
+            {
+                type        cylinder;
+                point1      (0  -0.028 0.00034);
+                point2      (0  -0.028 0.004);
+                radius      0.016;
+            }
+        }
+    }
+
+    inlet
+    {
+        surfaces       (inlet);
+
+        meshControl
+        {
+            patchInfo
+            {
+                patchType   patch;
+                inGroups    inlet;
+            }
+        }
+    }
+
+    outlet
+    {
+        $inlet
+        surfaces       (outlet);
+        meshControl
+        {
+            patchInfo
+            {
+                inGroups    outlet;
+            }
+        }
+    }
+
+    sparkplug
+    {
+        surfaces       (sparkplug);
+
+        meshControl
+        {
+            surfaceRefinement 3;
+        }
+    }
+
+    cylinderhead
+    {
+        surfaces       (cylinderhead);
+
+        meshControl
+        {
+            layerControl
+            {
+                nSurfaceLayers 2;
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

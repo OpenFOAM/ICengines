@@ -1,0 +1,23 @@
+snappyHexMeshConfig = $(FOAM_UTILITIES)/preProcessing/snappyHexMeshConfig
+
+$(snappyHexMeshConfig)/meshingSurface.C
+$(snappyHexMeshConfig)/meshingSurfaceList.C
+$(snappyHexMeshConfig)/caseFileConfiguration.C
+
+model/parallelMeshingSurfaceList.C
+write/engineBlockMeshConfiguration.C
+write/engineMeshQualityConfiguration.C
+write/engineSnappyConfiguration.C
+
+model/meshControl.C
+model/patchMeshControl.C
+model/patch.C
+model/buildPatchList.C
+
+ops/refinePatches.C
+ops/removeSupportSurfaces.C
+ops/filterRegionRefinement.C
+
+engineMeshConfig.C
+
+EXE = $(FOAM_USER_APPBIN)/engineMeshConfig

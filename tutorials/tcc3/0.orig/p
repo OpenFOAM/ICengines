@@ -1,0 +1,82 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+internalField   uniform 1 [bar];
+
+boundaryField
+{
+    staticWall
+    {
+        type            zeroGradient;
+    }
+
+    movingWall
+    {
+        $staticWall
+    }
+
+    outlet
+    {
+        type            uniformTotalPressure;
+        U               U;
+        phi             phi;
+        rho             rho;
+        gamma           1.4;
+        p0
+        {
+            type            table;
+            format          csv;
+            file            "constant/engineData/exhaustPressure.txt";
+            nHeaderLine     2;          // Number of header lines
+            units           ([CAD] [Pa]);
+            columns         (0 1);      // Column indices
+            separator       ",";        // Optional (defaults to ",")
+            mergeSeparators yes;        // Merge multiple separators
+            outOfBounds     repeat;     // For multi-cycle simulations, use repeat
+            interpolationScheme linear;
+        }
+    }
+
+    inlet
+    {
+        $outlet;
+        p0
+        {
+            type            table;
+            format          csv;
+            file            "constant/engineData/intakePressure.txt";
+            nHeaderLine     2;          // Number of header lines
+            units           ([CAD] [Pa]);
+            columns         (0 1);      // Column indices
+            separator       ",";        // Optional (defaults to ",")
+            mergeSeparators yes;        // Merge multiple separators
+            outOfBounds     repeat;     // For multi-cycle simulations, use repeat
+            interpolationScheme linear;
+        }
+    }
+
+    // for the NCC case
+    #includeEtc "caseDicts/setConstraintTypes"
+    "ncc.*"
+    {
+        type            zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //

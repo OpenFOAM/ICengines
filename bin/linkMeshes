@@ -1,0 +1,140 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+# Script
+#     linkMeshes
+#
+# Description
+#     Create or remove symbolic links to meshes directories, supporting parallel cases.
+#
+# Usage
+#     linkMeshes <targetCase>
+#     linkMeshes <targetCase> --parallel
+#     linkMeshes -u | --unlink         Remove existing meshes links
+#     linkMeshes -u --parallel         Remove processor*/constant/meshes links
+#
+#------------------------------------------------------------------------------
+
+set -euo pipefail
+
+unlink_only=false
+parallel_mode=false
+targetCase=""
+
+# Parse args (order independent)
+for arg in "$@"; do
+    case "$arg" in
+        -u|--unlink) unlink_only=true ;;
+        --parallel) parallel_mode=true ;;
+        -*)
+            echo "Unknown option: $arg"
+            echo "Usage: linkMeshes <targetCase> [--parallel]"
+            echo "       linkMeshes -u [--parallel]"
+            exit 1
+            ;;
+        *)
+            # assume positional targetCase (only one allowed)
+            if [ -z "$targetCase" ]; then
+                targetCase="$arg"
+            else
+                echo "Multiple target cases provided. Only one allowed."
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+# -------------------
+# Unlink mode
+# -------------------
+if $unlink_only; then
+    if $parallel_mode; then
+        echo "Unlinking processor*/constant/meshes in current (target) case..."
+        shopt -s nullglob
+        for p in processor*; do
+            [ -d "$p" ] || continue
+            if [ -e "$p/constant/meshes" ] || [ -L "$p/constant/meshes" ]; then
+                echo "Removing $p/constant/meshes"
+                rm -rf "$p/constant/meshes"
+            else
+                echo "No meshes in $p to remove."
+            fi
+        done
+        shopt -u nullglob
+        echo "Done."
+        exit 0
+    else
+        echo "Unlinking constant/meshes in current case..."
+        if [ -e constant/meshes ] || [ -L constant/meshes ]; then
+            rm -rf constant/meshes
+            echo "Removed constant/meshes"
+        else
+            echo "No constant/meshes to remove."
+        fi
+        echo "Done."
+        exit 0
+    fi
+fi
+
+# -------------------
+# Link mode
+# -------------------
+if [ -z "$targetCase" ]; then
+    echo "Usage: linkMeshes <targetCase> [--parallel]"
+    echo "       linkMeshes -u [--parallel]"
+    exit 1
+fi
+
+absTargetCase=$(readlink -f "$targetCase")
+
+if [ ! -d "$absTargetCase" ]; then
+    echo "Error: target case does not exist: $absTargetCase"
+    exit 1
+fi
+
+echo "Linking from: $absTargetCase"
+
+if ! $parallel_mode; then
+    # Serial linking: link constant/meshes
+    rm -rf constant/meshes 2>/dev/null || true
+    echo "Linking constant/meshes -> $absTargetCase/constant/meshes"
+    ln -s "$absTargetCase/constant/meshes" constant/meshes
+    echo "Done."
+    exit 0
+fi
+
+# Parallel linking: create processor*/constant and link their meshes directories
+echo "Parallel mode: linking processor*/constant/meshes"
+
+# find processor directories in source
+srcProcs=( "$absTargetCase"/processor* )
+# handle no processors found
+if [ ! -d "${srcProcs[0]}" ]; then
+    echo "Error: no processor* directories found in source: $absTargetCase"
+    exit 1
+fi
+
+# For each processor in the source, create matching processor in target and link meshes
+for srcProcPath in "${srcProcs[@]}"; do
+    [ -d "$srcProcPath" ] || continue
+    procName=$(basename "$srcProcPath")   # e.g. processor0
+    echo "Processing $procName ..."
+
+    # ensure processor dir exists in target
+    mkdir -p "$procName/constant"
+
+    # remove any existing meshes entry
+    if [ -e "$procName/constant/meshes" ] || [ -L "$procName/constant/meshes" ]; then
+        rm -rf "$procName/constant/meshes"
+    fi
+
+    # link meshes from source processor constant
+    if [ -d "$absTargetCase/$procName/constant/meshes" ]; then
+        ln -s "$absTargetCase/$procName/constant/meshes" "$procName/constant/meshes"
+        echo " -> linked $procName/constant/meshes -> $absTargetCase/$procName/constant/meshes"
+    else
+        echo "Warning: source does not have $procName/constant/meshes, skipping $procName"
+    fi
+done
+
+echo "Done."
+exit 0

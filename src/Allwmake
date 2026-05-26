@@ -1,0 +1,11 @@
+#!/bin/bash
+cd ${0%/*} || exit 1    # Run from this directory
+
+# Parse arguments for compilation
+. $WM_DIR/scripts/AllwmakeParseArguments
+
+# Compile preProcessing library
+wmake $targetType preProcessing
+wmake $targetType searchableSurfaces
+
+#------------------------------------------------------------------------------

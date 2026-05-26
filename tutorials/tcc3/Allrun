@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+cd ${0%/*} || exit 1 # Run from this directory
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+NSLOTS="${NSLOTS:-256}"
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
+ls constant/meshes | sort -n >constant/meshTimes
+
+START_TIME=0
+END_TIME=720
+foamDictionary -set "startTime=${START_TIME},endTime=${END_TIME}" \
+    system/controlDict
+cp -r constant/meshes/$START_TIME/polyMesh constant/
+cp -r 0.orig $START_TIME
+
+# Set the tracer field in the intakePort to 1
+runApplication -o createZones -clear -zonesGenerator
+runApplication -o setFields -time $START_TIME
+
+# Run decomposePar with dynamically generated ioRanks
+runApplication -o decomposePar
+cat constant/meshTimes | parallel --memfree 1G -j 10 "decomposePar -mesh {} -noFunctionObjects"
+runParallel -a foamRun

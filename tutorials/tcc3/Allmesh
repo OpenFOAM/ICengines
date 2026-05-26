@@ -1,0 +1,36 @@
+#!/bin/sh
+cd ${0%/*} || exit 1 # Run from this directory
+
+# Set number of threads to 4
+OMP_NUM_THREADS=4
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+NSLOTS="${NSLOTS:-36}"
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
+
+./downloadGeometry
+
+# Predict remeshing instants
+runApplication -o predictRemeshInstants
+
+# Setup STL surfaces in the predict remesh instants directory
+runApplication -o moveSurfaces
+
+# Write blockMeshDict, SnappyHexMeshDict, and meshQualityDict in the instants directory
+runApplication -o engineMeshConfig
+
+# Submit job script on the cluster to generate mesh
+cat constant/meshTimes | xargs -I{} generateMesh -sge -cores $NSLOTS -mesh {}
+
+# Use these commands to generate meshes for selected instants
+# Recommended for building meshes for the first time from scratch
+
+#runApplication -o moveSurfaces  -times '(0 135 136)'
+#runApplication -o engineMeshConfig -times '(0 135 136)'
+#generateMesh -sge -mesh 0
+#generateMesh -sge -mesh 135
+#generateMesh -sge -mesh 136
+
+#------------------------------------------------------------------------------

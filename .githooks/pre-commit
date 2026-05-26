@@ -1,0 +1,53 @@
+#!/bin/bash
+set -euo pipefail
+
+# Check for excluded files in public branch
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+EXCLUDED_PATHS=(
+    "tutorials/w25"
+    "tutorials/w31"
+    "etc/"
+    "src/alphatWallFunctions_w/"
+    "src/functionObjects_w/"
+    "src/lagrangian/parcel/"
+    "applications/utilities/generateInjectorRefinements/"
+    "applications/utilities/translatePatch/"
+)
+
+if [ "$BRANCH" = "public" ]; then
+    staged_files_temp="$(git diff --cached --name-only --diff-filter=ACM)"
+    for path in "${EXCLUDED_PATHS[@]}"; do
+        if echo "$staged_files_temp" | grep -q "^$path"; then
+            echo "❌ ERROR: Cannot commit files in '$path' to public branch"
+            echo "Excluded paths:"
+            printf '  - %s\n' "${EXCLUDED_PATHS[@]}"
+            exit 1
+        fi
+    done
+fi
+
+# Staged files added/copied/modified
+staged_files="$(git diff --cached --name-only --diff-filter=ACM)"
+
+# Nothing to do
+[ -z "${staged_files}" ] && exit 0
+
+# Remove trailing whitespace from staged text files, then re-stage
+while IFS= read -r f; do
+  [ -f "${f}" ] || continue
+
+  # Skip binary files
+  if ! grep -Iq . "${f}"; then
+    continue
+  fi
+
+  sed -i -E 's/[[:blank:]]+$//' "${f}"
+  git add "${f}"
+done <<< "${staged_files}"
+
+# Fail commit if whitespace problems remain in staged diff
+if ! git diff --cached --check -- .; then
+  echo
+  echo "pre-commit: whitespace errors remain. Fix and commit again."
+  exit 1
+fi

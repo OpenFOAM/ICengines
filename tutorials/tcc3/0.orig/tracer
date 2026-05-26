@@ -16,7 +16,20 @@ FoamFile
 
 dimensions      [0 0 0 0 0 0 0];
 
-internalField   uniform 0;
+internalField
+{
+    type    zonal;
+    defaultValue 0;
+
+    zones
+    {
+        intakePort
+        {
+            type    lookup;
+            value   1;
+        }
+    }
+}
 
 boundaryField
 {

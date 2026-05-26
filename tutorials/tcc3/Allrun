@@ -15,9 +15,7 @@ foamDictionary -set "startTime=${START_TIME},endTime=${END_TIME}" \
 cp -r constant/meshes/$START_TIME/polyMesh constant/
 cp -r 0.orig $START_TIME
 
-# Set the tracer field in the intakePort to 1
 runApplication -o createZones -clear -zonesGenerator
-runApplication -o setFields -time $START_TIME
 
 # Run decomposePar with dynamically generated ioRanks
 runApplication -o decomposePar

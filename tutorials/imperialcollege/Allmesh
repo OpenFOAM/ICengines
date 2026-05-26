@@ -18,5 +18,5 @@ for mesh in $(cat constant/meshTimes); do
 done
 
 # Submit all the mesh jobs to cluster (pseudo-parallel)
-# cat constant/meshTimes | xargs -I{} generateMesh -<sge/slurm> -cores $NSLOTS -mesh {}
+# cat constant/meshTimes | xargs -I{} generateMesh -<sge/slurm> (optional) -cores $NSLOTS -mesh {}
 #------------------------------------------------------------------------------

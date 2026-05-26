@@ -1,102 +1,77 @@
-# imperialcollege Tutorial
+# Imperial College Case
 
-This tutorial demonstrates a moving-engine mesh workflow using AATE utilities on top of OpenFOAM.
+## Content
+- Introduction to the Imperial College engine case
+- Dependencies
+- Files and scripts in this tutorial
+- Running the case
+- Case assumptions and modeling notes
+- References
 
-## What This Case Does
+## Introduction to the Imperial College Engine Case
+The Imperial College engine case is a simplified reciprocating engine benchmark originally discussed by Morse et al. [1] and Gosman et al. [2]. The model is axisymmetric and focuses on turbulent in-cylinder flow behavior, where the piston performs periodic motion while valve motion is omitted in the simplified setup.
 
-1. Predicts remesh instants from prescribed surface motions.
-2. Moves surfaces and configures engine mesh metadata.
-3. Generates a sequence of meshes in `constant/meshes`.
-4. Runs a decomposed transient simulation across those meshes.
+This case is useful as a controlled benchmark for studying flow structures, turbulence behavior, mesh motion effects, and numerical sensitivity in engine CFD. It is frequently used to compare simulation trends against published measurements and higher-fidelity references.
 
-## Prerequisites
+## Dependencies
+- OpenFOAM environment (commonly OpenFOAM-dev in this project)
+- ParaView or another Linux visualization tool
+- Python 3 for optional plotting/post-processing utilities
+- Optional Python packages depending on your post-processing workflow:
+  - numpy
+  - matplotlib
+  - scipy
 
-- OpenFOAM environment sourced (the scripts use `$WM_PROJECT_DIR`).
-- AATE built and available in your environment.
-- Compilation instructions are documented in the project root README: [../../README.md](../../README.md).
+## Files and Scripts in This Tutorial
+The workflow in this repository is centered around these scripts and folders:
 
-Optional tools:
+- Allclean: removes generated run-time and mesh artifacts
+- Allmesh: generates remesh schedule and creates mesh sequence
+- Allrun: initializes and runs the simulation
+- remeshInstants.py: optional helper to inspect/plot remeshing schedule
+- system/: solver, decomposition, and sampling dictionaries
+- constant/: geometry, dynamic mesh, and mesh-time related data
+- 0.orig/: initial conditions template
 
-- `parallel` (GNU parallel) for faster per-mesh decomposition in `Allrun`.
-- Python packages for plotting remesh events:
-  - `pandas`
-  - `numpy`
-  - `matplotlib`
-
-## Quick Start
-
+## Running the Case
 Run from this directory:
 
 ```bash
-cd /home/blttkgl/aate/tutorials/imperialcollege
+cd tutorials/imperialcollege
 ./Allclean
 ./Allmesh
 ./Allrun
 ```
 
-## Parallelism (`NSLOTS`)
-
-Both `Allmesh` and `Allrun` read `NSLOTS` (default: `4`) and write it to `system/decomposeParDict` as `numberOfSubdomains`.
-
-Example:
-
-```bash
-NSLOTS=16 ./Allmesh
-NSLOTS=16 ./Allrun
-```
-
-## Script Breakdown
-
-### `Allclean`
-
-- Cleans the case via OpenFOAM `CleanFunctions`.
-- Resets `constant/meshTimes`.
-
-### `Allmesh`
-
-- Runs:
-  - `predictRemeshInstants`
-  - `moveSurfaces`
-  - `engineMeshConfig`
-- Generates each mesh listed in `constant/meshTimes` with `generateMesh`.
-- After mesh generation, verify patch ordering consistency across all meshes:
+Recommended pre-check:
 
 ```bash
 compareMeshes -referenceMesh 0
 ```
 
-Expected output:
-
-```text
-All the meshes have the same number of patches, in same ordering!
-```
-
-### `Allrun`
-
-- Loads mesh times from `constant/meshes`.
-- Sets `startTime=0` and `endTime=2160` in `system/controlDict`.
-- Copies the initial `polyMesh` and initializes the time directory from `0.orig`.
-- Creates zones and sets initial fields (`createZones`, `setFields`).
-- Decomposes the base case and each mesh time.
-- Runs `foamRun` in parallel.
-
-If GNU parallel is not installed, use the serialized loop already provided as comments in `Allrun`.
-
-## Useful Outputs
-
-- `constant/meshTimes`: remesh schedule used by mesh generation and run scripts.
-- `log.predictRemeshInstants`, `log.moveSurfaces`, `log.engineMeshConfig`: utility logs.
-- Simulation time directories (e.g., `0`, `...`) and decomposed `processor*` directories.
-
-## Plotting Remesh Instants (Optional)
-
-A plotting helper is provided:
+Optional remesh instant plotting:
 
 ```bash
 python3 remeshInstants.py
 ```
 
-## Notes
+## Practical Notes
+- Source your OpenFOAM environment before running the scripts.
+- This case can be computationally expensive depending on decomposition and mesh count.
+- If GNU Parallel is available, you can uncomment the parallel execution lines in the run scripts and execute meshing/decomposition steps concurrently.
+- You can configure the `generateMesh` execution in the scripts for your cluster environment (for example, scheduler submission wrappers and resource settings).
+- Review decomposition settings in system/decomposeParDict for your hardware.
+- Utility logs generated during meshing are useful for debugging remesh schedule and surface motion consistency.
 
-- The scripts are written to be run from their own directory; they `cd` into it automatically.
-- For cluster usage, `Allmesh` includes an example `xargs`-based submission pattern in comments.
+## Case Assumptions and Modeling Notes
+- The case is a simplified axisymmetric engine representation for fundamental flow/turbulence analysis.
+- Mesh motion is used to represent piston movement in the dynamic region.
+- Boundary and turbulence setup should be reviewed in 0.orig and system dictionaries for your target solver/version.
+- The case is intended as a benchmark-style setup for comparing numerical behavior, not as a full production engine geometry.
+
+## References
+[1] Morse, A. P., Whitelaw, J. H., and Yanneskis, M., Turbulent flow measurements by laser-Doppler anemometry in motored piston-cylinder assemblies, Journal of Fluids Engineering, vol. 101, pp. 208-216, 1979.
+
+[2] Gosman, A. D., Melling, A., Whitelaw, J. H., and Watkins, P., Axisymmetric flow in a motored reciprocating engine, 1978.
+
+[3] Fischer, P. F., Lottes, J. W., and Kerkemeier, S. G., Nek5000 web page, 2008: http://nek5000.mcs.anl.gov

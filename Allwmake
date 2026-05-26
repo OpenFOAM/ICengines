@@ -39,8 +39,3 @@ for f in bin/*; do
     [ -f "${f}" ] &&
         ln -sf "$(realpath ${f})" "${FOAM_USER_APPBIN}/$(basename ${f})"
 done
-
-# Put .env-files in user's platforms
-for f in etc/*.env; do
-    sed "s|\${WM_PROJECT_VERSION:-dev}|${WM_PROJECT_VERSION}|g" "${f}" >"$FOAM_LIBBIN/../../$(basename ${f})"
-done

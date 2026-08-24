@@ -8,7 +8,7 @@ AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework designed for industrial-sca
 ## Prerequisites
 Before using AATE, make sure you have the following installed:
 
-- OpenFOAM-dev
+- OpenFOAM-14
 
 ## Build
 This project uses an `Allwmake` script to build all libraries and applications.

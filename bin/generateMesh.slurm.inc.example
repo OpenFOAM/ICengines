@@ -1,0 +1,22 @@
+SCHEDULER_NAME="SLURM"
+SCHEDULER_NPROCS='$SLURM_NTASKS'
+
+writeSchedulerHeader() {
+    [ -z ${SLURM_PARTITION+x} ] && ((NPROCS % 128 == 0)) &&
+        SLURM_PARTITION='standard'
+
+    cat <<EOF
+#SBATCH --chdir=$WORK_DIR
+#SBATCH --job-name=generateMesh_${MESH_TIME:-local}
+#SBATCH --account=${SBATCH_ACCOUNT:?Set SBATCH_ACCOUNT}
+#SBATCH --partition=${SBATCH_PARTITION:-small}
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=$NPROCS
+#SBATCH --mem-per-cpu=${SLURM_MEM_PER_CPU:-1750}
+#SBATCH --time=${SLURM_TIME:-01:00:00}
+#SBATCH --output=log.%j.out
+#SBATCH --error=log.%j.err
+
+source "/path/to/OpenFOAM/environment"
+EOF
+}

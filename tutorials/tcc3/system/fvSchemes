@@ -1,0 +1,70 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         Euler;
+}
+
+gradSchemes
+{
+    default         Gauss linear;
+     grad(U)        cellLimited Gauss linear 1;
+}
+
+divSchemes
+{
+    default             none;
+    div(phi,U)          Gauss cellCoBlended 2 limitedLinearV 1 4 upwind;
+    div(phi,K)          Gauss limitedLinear 1;
+    div(phi,tracer)     Gauss limitedLinear 1;
+    div(phi,Yi_h)       Gauss limitedLinear 1;
+    div(phi,h)          Gauss limitedLinear 1;
+    div(phi,tracer)     Gauss limitedLinear 1;
+
+    div(phi,e)          Gauss limitedLinear 1;
+    div(phid,p)         Gauss limitedLinear 1;
+    div(phi,(p|rho))    Gauss limitedLinear 1;
+    div(phi,k)          Gauss upwind;
+    div(phi,epsilon)    Gauss upwind;
+    div(phi,tracer)     Gauss limitedLinear 1;
+    div(phi,omega)      Gauss upwind;
+    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+
+}
+
+laplacianSchemes
+{
+    default         Gauss linear limited corrected 0.333;
+}
+
+interpolationSchemes
+{
+    default         linear;
+    interpolate(Co) localMax;
+}
+
+snGradSchemes
+{
+    default       limited corrected 0.333;
+}
+
+wallDist
+{
+    method meshWave;
+}
+
+// ************************************************************************* //

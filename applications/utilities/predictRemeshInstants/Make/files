@@ -1,0 +1,10 @@
+
+remesh/patchRemesh.C
+remesh/inverseFunction1.C
+remesh/remeshPredictor.C
+remesh/remeshPredictorIO.C
+remesh/remeshInstant.C
+
+predictRemeshInstants.C
+
+EXE = $(FOAM_USER_APPBIN)/predictRemeshInstants

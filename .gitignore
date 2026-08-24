@@ -1,0 +1,89 @@
+# Prerequisites
+*.d
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# dynamicCode folders
+dynamicCode/
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.app
+
+# lnInclude
+lnInclude
+
+# Build directories
+linux*Cray*/
+linux*Gcc*/
+
+# Dependency files
+*.dep
+
+# Vscode
+.vscode/
+
+# Image files
+*.eps
+*.pdf
+
+# Processor directories
+processor*
+
+# Mesh directory
+polyMesh/
+
+# Log files
+log.*
+
+
+# Post processing directory
+postProcessing/
+
+# Image files
+*.png
+
+# Output and log files
+*.dat
+
+# STL surface files
+*.stl
+
+# meshes and 0 folder
+meshes/
+0/
+meshTimes
+
+# Residue .done and core. files from cluster
+*.done
+core.*
+
+# build folder for pyJac output
+build/
+
+# .slurm and .sge extension files for cluster scripts
+*.slurm
+*.sge
+
+tcc3_fine/

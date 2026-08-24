@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+#------------------------------------------------------------------------------
+# =========                 |
+# \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+#  \\    /   O peration     | Website:  https://openfoam.org
+#   \\  /    A nd           | Copyright (C) 2025 OpenFOAM Foundation
+#    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+# License
+#     This file is originating from OpenFOAM and modified by the authors
+#     described below.
+#
+#     OpenFOAM is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+#     ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#     FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#     for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Script
+#     convertToBatch
+#
+# Description
+#     Convert a plain/local Allrun script to SGE or SLURM batch-script.
+#
+# Authors
+#     Stanislau Stasheuski, Wärtsilä, 2025.
+#     stanislau.stasheuski[at]wartsila.com
+#
+#------------------------------------------------------------------------------
+usage() {
+    exec 1>&2
+    while [ "$#" -ge 1 ]; do echo "$1"; shift; done
+    cat<<USAGE
+
+Usage: ${0##*/} [OPTION] <script>
+options:
+  -case <dir>       specify alternative case directory, default is the script's parent directory
+  -cores <N>        Number of cores to use for job
+  -environment <env> Scheduler environment: slurm or sge (required)
+  -help             print the usage
+
+* convert a plain/local Allrun script to SGE or SLURM batch-script.
+
+Example:
+  ${0##*/} -environment slurm -cores 36 Allrun
+
+USAGE
+    exit 1
+}
+error() {
+    exec 1>&2
+    while [ "$#" -ge 1 ]; do
+        echo "Error: $1"
+        shift
+    done
+    usage
+    exit 1
+}
+
+# Parse options
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+    -c | -case)
+        [ "$#" -ge 2 ] || usage "'$1' option requires an argument"
+        FOAM_CASE=$2
+        shift 2
+        ;;
+    -cores)
+        [ "$#" -ge 2 ] || usage "'$1' option requires an argument"
+        NPROCS=$2
+        shift 2
+        ;;
+    -environment | -env)
+        [ "$#" -ge 2 ] || usage "'$1' option requires an argument"
+        scheduler=$2
+        shift 2
+        ;;
+    -h | -help)
+        usage
+        exit 0
+        ;;
+    -*)
+        usage "unknown option: '$*'"
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+# Check for script argument
+[ "$#" -eq 1 ] || usage "Error: incorrect arguments specified"
+srcScript="${1}"
+
+# Validate scheduler
+[ -z "$scheduler" ] && usage "Error: -environment option is required"
+[[ "$scheduler" != "slurm" && "$scheduler" != "sge" ]] && usage "Error: environment must be 'slurm' or 'sge'"
+
+[ -f "${srcScript}" ] ||
+    error "script file not found: ${srcScript}"
+
+[ -z ${FOAM_CASE+x} ] &&
+    FOAM_CASE=$(dirname $(realpath "${srcScript}"))
+[ ! -f "${FOAM_CASE}/system/decomposeParDict" ] &&
+    error "decomposeParDict not found in ${FOAM_CASE}/system/"
+
+if [ -z ${NPROCS+x} ]; then
+    NPROCS=$(foamDictionary -case "${FOAM_CASE}" -entry numberOfSubdomains -value system/decomposeParDict)
+else
+    foamDictionary -case "${FOAM_CASE}" -entry numberOfSubdomains -set "${NPROCS}" system/decomposeParDict
+fi
+
+# Ensure job name starts with a letter: remove leading digits and underscores
+cleanCase=$(basename "$FOAM_CASE" | sed 's/^[0-9_]*//')
+cleanScript=$(basename "$srcScript" .sh | sed 's/^[0-9_]*//')
+
+
+if [[ "${scheduler}" == "slurm" ]]; then
+
+    if (( NPROCS % 128 == 0 )); then
+        NODES=$(( NPROCS / 128 ))
+        SLURM_PARTITION='standard'
+
+        header="#!/usr/bin/env bash
+#SBATCH --job-name=${cleanCase}_${cleanScript}
+#SBATCH --account=${SBATCH_ACCOUNT:-project_462000885}
+#SBATCH --partition=${SLURM_PARTITION:-standard}
+#SBATCH --nodes=${NODES}
+#SBATCH --ntasks-per-node=128
+#SBATCH --mem=224G
+#SBATCH --time=${TIME:-2-0}
+#SBATCH --output=log.%j.out
+#SBATCH --error=log.%j.err
+echo \"Utilizing: \${SLURM_NTASKS} cores across ${NODES} node(s)\"
+source /projappl/project_462000885/opt/aate/etc/lumi.env
+
+cd \"\$SLURM_SUBMIT_DIR\" || exit 1
+NSLOTS=\$SLURM_NTASKS
+"
+
+    elif (( NPROCS > 128 )); then
+        echo "WARNING: NPROCS=${NPROCS} is not divisible by 128."
+        echo "         It is recommended to use multiples of 128 on the standard partition."
+        NODES=$(( NPROCS / 128 + 1 ))
+        header="#!/usr/bin/env bash
+#SBATCH --job-name=${cleanCase}_${cleanScript}
+#SBATCH --account=${SBATCH_ACCOUNT:-project_462000885}
+#SBATCH --partition=${SLURM_PARTITION:-standard}
+#SBATCH --nodes=${NODES}
+#SBATCH --ntasks=${NPROCS}
+#SBATCH --mem=224G
+#SBATCH --time=${TIME:-2-0}
+#SBATCH --output=log.%j.out
+#SBATCH --error=log.%j.err
+echo \"Utilizing: \$SLURM_NTASKS cores\"
+source /projappl/project_462000885/opt/aate/etc/lumi.env
+
+cd \"\$SLURM_SUBMIT_DIR\" || exit 1
+NSLOTS=\$SLURM_NTASKS
+"
+    else
+        header="#!/usr/bin/env bash
+#SBATCH --job-name=${cleanCase}_${cleanScript}
+#SBATCH --account=${SBATCH_ACCOUNT:-project_462000885}
+#SBATCH --partition=${SLURM_PARTITION:-small}
+#SBATCH --nodes=1
+#SBATCH --ntasks=${NPROCS}
+#SBATCH --mem-per-cpu=1750
+#SBATCH --time=${TIME:-2-0}
+#SBATCH --output=log.%j.out
+#SBATCH --error=log.%j.err
+echo \"Utilizing: \$SLURM_NTASKS cores\"
+source /projappl/project_462000885/opt/aate/etc/lumi.env
+
+cd \"\$SLURM_SUBMIT_DIR\" || exit 1
+NSLOTS=\$SLURM_NTASKS
+"
+    fi
+
+#: }}}
+
+#: SGE scheduler specifications {{{
+elif [[ "${scheduler}" == "sge" ]]; then
+    header="#!/usr/bin/env bash
+#$ -cwd
+#$ -N ${cleanCase}_${cleanScript}
+#$ -pe orte ${NPROCS}
+#$ -o log.\$JOB_ID.out
+#$ -e log.\$JOB_ID.err
+#$ -m n
+echo \"Utilizing: \$NSLOTS cores\"
+
+source $(realpath $FOAM_LIBBIN/../../stargate.env)"
+fi
+#: }}}
+
+printf 'Converting %s to batch script for %s scheduler in %s\n' \
+    "${srcScript}" "${scheduler}" "${FOAM_CASE}"
+
+{
+    printf '%s\n\n' "${header}"
+
+    sed '
+        1{
+            # Remove shebang only if it is the first line
+            /^#!\/usr\/bin\/env[[:space:]]\+bash/d
+        }
+
+        # Remove "cd to script directory" (Slurm-unsafe)
+        /^[[:space:]]*cd[[:space:]]\+\${0%\/\*}.*$/d
+        /^[[:space:]]*cd[[:space:]]\+\"\$(dirname[[:space:]]\+\"\$0\")\".*$/d
+    ' "${srcScript}"
+
+
+    printf '\n# End of %s auto-conversion\n' "${0##*/}"
+} > "${FOAM_CASE}/$(basename "$srcScript" .sh).${scheduler}"
+
+#------------------------------------------------------------------------------

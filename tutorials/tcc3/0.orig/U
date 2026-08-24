@@ -1,0 +1,52 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+//default     staticWall;
+// I set piston and valve to movingWall
+// I set inlet and outlet to inletOutlet
+boundaryField
+{
+    #includeEtc "caseDicts/setConstraintTypes"
+    staticWall
+    {
+        type            noSlip;
+    }
+
+    movingWall
+    {
+        type            movingWallVelocity;
+        value           uniform (0 0 0);
+    }
+
+
+    inlet
+    {
+        type            pressureInletOutletVelocity;
+        phi             phi;
+        value           uniform (0 0 0);
+    }
+
+    outlet
+    {
+        $inlet;
+    }
+}
+
+
+// ************************************************************************* //

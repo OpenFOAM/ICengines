@@ -1,0 +1,32 @@
+#!/bin/sh
+cd ${0%/*} || exit 1 # Run from this directory
+
+# Parse --sudo flag
+SUDO_MODE=false
+for arg in "$@"; do
+    if [ "$arg" = "--sudo" ]; then
+        SUDO_MODE=true
+        set -- $(printf '%s\n' "$@" | sed 's/--sudo//')
+        break
+    fi
+done
+
+if [ "$SUDO_MODE" = true ]; then
+    mkdir -p "${FOAM_SITE_APPBIN}" "${FOAM_SITE_LIBBIN}"
+    export FOAM_USER_LIBBIN="${FOAM_SITE_LIBBIN}"
+    export FOAM_USER_APPBIN="${FOAM_SITE_APPBIN}"
+    echo "Running in --sudo mode: installing to system locations."
+fi
+
+. $WM_DIR/scripts/AllwmakeParseArguments
+
+echo "Utilising $WM_PROJECT-$WM_PROJECT_VERSION for compilation."
+
+src/Allwmake $targetType $*
+applications/Allwmake $targetType $*
+
+for f in bin/*; do
+    if [ -f "$f" ] && [ -x "$f" ]; then
+        ln -sf "$(realpath "$f")" "${FOAM_USER_APPBIN}/$(basename "$f")"
+    fi
+done

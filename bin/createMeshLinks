@@ -1,0 +1,132 @@
+#!/bin/bash
+
+# Function to create symbolic links
+create_links() {
+    local region_suffix="$1"
+    local mesh_dir="$2"
+    if [ -n "$mesh_dir" ]; then
+        # Process the specified mesh only
+        if [ -d "$PWD/constant/meshes/$mesh_dir$region_suffix" ]; then
+            link_target="$PWD/constant/$mesh_dir"
+            link_source="$PWD/constant/meshes/$mesh_dir$region_suffix"
+
+            if [ -L "$link_target" ]; then
+                echo "Link $link_target already exists. Removing existing link."
+                rm "$link_target"
+            fi
+
+            ln -s "$link_source" "$link_target"
+            echo "Created symlink for $mesh_dir at $mesh_dir${region_suffix}"
+        else
+            echo "Directory $PWD/constant/meshes/$mesh_dir$region_suffix does not exist, skipping."
+        fi
+    else
+        # Process all meshes in the folder
+        for dir in "$PWD/constant/meshes"/*/; do
+            if [ -d "$dir$region_suffix" ]; then
+                link_target="$PWD/constant/$(basename "$dir")"
+                link_source="$dir$region_suffix"
+
+                if [ -L "$link_target" ]; then
+                    echo "Link $link_target already exists. Removing existing link."
+                    rm "$link_target"
+                fi
+
+                ln -s "$link_source" "$link_target"
+                echo "Created symlink for $(basename "$dir") at $(basename "$dir")${region_suffix}"
+            else
+                echo "Directory $dir$region_suffix does not exist, skipping."
+            fi
+        done
+    fi
+}
+
+
+# Function to purge symbolic links
+purge_links() {
+    local region_suffix="$1"
+    local mesh_dir="$2"
+    if [ -n "$mesh_dir" ]; then
+        # Purge only the specified mesh
+        link="$PWD/constant/$mesh_dir"
+        if [ -L "$link" ] && [[ "$(basename "$link")" == *"$region_suffix" ]] && [ -d "$(readlink "$link")" ]; then
+            rm "$link"
+            echo "Removed symlink $mesh_dir"
+        fi
+    else
+        # Purge all matching links
+        for link in "$PWD/constant"/*; do
+            if [ -L "$link" ] && [[ "$(basename "$link")" == *"$region_suffix" ]] && [ -d "$(readlink "$link")" ]; then
+                rm "$link"
+                echo "Removed symlink $(basename "$link")"
+            fi
+        done
+    fi
+}
+
+# Function to display help
+display_help() {
+    echo "Usage: $0 [OPTION] [--region REGION] [--mesh MESH]"
+    echo "Create or purge symbolic links in the \$PWD/constant directory for the meshes under \$PWD/constant/meshes."
+    echo
+    echo "Options:"
+    echo "  --purge        Remove symbolic links in the \$PWD/constant directory."
+    echo "  --help         Display this help message."
+    echo
+    echo "Region:"
+    echo "  --region REGION Append REGION to the symbolic link source."
+    echo
+    echo "Mesh:"
+    echo "  --mesh MESH    Specify a single mesh to process instead of all meshes."
+    echo
+    echo "If no option is provided, the script will create symbolic links."
+}
+
+# Main logic
+region=""
+mesh=""
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --region)
+            if [ -z "$2" ]; then
+                echo "Error: --region flag requires an argument."
+                exit 1
+            fi
+            region="/$2"
+            shift 2
+            ;;
+        --mesh)
+            if [ -z "$2" ]; then
+                echo "Error: --mesh flag requires an argument."
+                exit 1
+            fi
+            mesh="$2"
+            shift 2
+            ;;
+        --purge)
+            action="purge"
+            shift
+            ;;
+        --help)
+            display_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            display_help
+            exit 1
+            ;;
+    esac
+done
+
+# Default action is to create links
+action="${action:-create}"
+
+# Execute the appropriate function
+if [[ "$action" == "purge" ]]; then
+    purge_links "$region" "$mesh"
+else
+    create_links "$region" "$mesh"
+fi

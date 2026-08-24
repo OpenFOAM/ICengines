@@ -1,0 +1,15 @@
+SCHEDULER_NAME="SGE"
+SCHEDULER_NPROCS='$NSLOTS'
+
+writeSchedulerHeader() {
+    cat <<EOF
+#$ -cwd
+#$ -N generateMesh_${MESH_TIME:-local}
+#$ -pe orte $NPROCS
+#$ -o log.\$JOB_ID.out
+#$ -e log.\$JOB_ID.err
+#$ -m n
+
+source "/path/to/OpenFOAM/environment"
+EOF
+}

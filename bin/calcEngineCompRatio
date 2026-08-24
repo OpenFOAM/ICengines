@@ -1,0 +1,111 @@
+#!/bin/bash
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
+
+# Function to display usage information
+display_help() {
+    echo "Usage: $0 -t <timeInstance> [-c <cellZone>] [-r <region>] [-h]"
+    echo "  -t <timeInstance>: Specify the time instance."
+    echo "  -c <cellZone>: Specify the cell zone (optional)."
+    echo "  -r <region>: Specify the region name (optional)."
+    echo "  -h: Display this help message."
+
+    echo -e "\nOperations performed by this script:"
+    echo "  1. Copy files from the 'constant' directory for the specified time instance."
+    echo "  2. Modify dynamicMeshDict and controlDict to comment out valve motion, and set time controls that enable engineCompRatio utility."
+    echo "  3. Run the 'engineCompRatio' command. It optionally takes a cellZone argument if the user provides it."
+    echo "  4. Display the last 5 lines of the 'log.engineCompRatio' file."
+    echo "  5. Cleanup and remove the temp folder."
+    echo -e "\nNote: Make sure to run the script from the desired directory."
+
+    exit 1
+}
+
+# Set default values
+timeInstance=""
+cellZone=""
+region=""
+
+# Read command line options
+while getopts "t:c:r:h" opt; do
+    case $opt in
+        t) timeInstance=$OPTARG;;
+        c) cellZone=$OPTARG;;
+        r) region=$OPTARG;;
+        h) display_help;;
+        \?) display_help;;
+    esac
+done
+
+# Check if required options are provided
+if [ -z "$timeInstance" ]; then
+    echo "Error: -t <timeInstance> is a required option."
+    display_help
+fi
+
+# Determine the constant folder path
+if [ -n "$region" ]; then
+    constantFolder="constant/meshes/$timeInstance/$region"
+else
+    constantFolder="constant/meshes/$timeInstance"
+fi
+
+# Check if the specified time instance folder exists
+if [ ! -d "$constantFolder" ]; then
+    echo "Error: Specified time instance '$timeInstance' does not exist in the directory '$constantFolder'."
+    echo "Available time instances:"
+    if [ -n "$region" ]; then
+        ls -d constant/meshes/*/ | while read timeDir; do
+            timeInstance=$(basename "$timeDir")
+            [ -d "constant/meshes/$timeInstance/$region" ] && echo "$timeInstance"
+        done | sort -n | column
+    else
+        ls -d constant/meshes/*/ | awk -F'/' '{print $3}' | sort -n | column
+    fi
+    exit 1
+fi
+
+MESH_TO_MESH_TIME=$timeInstance
+TMP_DIR=_tmp_engineCompRatio
+rm -rf $TMP_DIR
+mkdir -p $TMP_DIR/constant
+cp -r system/ $TMP_DIR
+cp -r $constantFolder/polyMesh $TMP_DIR/constant
+# Copy dynamicMeshDict from the appropriate path
+if [ -n "$region" ]; then
+    foamDictionary constant/$region/dynamicMeshDict -expand -output $TMP_DIR/constant/dynamicMeshDict
+else
+    foamDictionary constant/dynamicMeshDict -expand -output $TMP_DIR/constant/dynamicMeshDict
+fi
+
+rsync -av \
+  --exclude='meshes/' \
+  --exclude='geometry/' \
+  --exclude='log.*' \
+  --exclude='polyMesh/' \
+  "constant/" "$TMP_DIR/constant/"
+
+pushd $TMP_DIR > /dev/null
+
+foamDictionary constant/dynamicMeshDict -entry mover/valves -set '{}'
+foamDictionary constant/dynamicMeshDict -entry topoChanger -remove
+foamDictionary system/controlDict -entry startFrom -set startTime
+foamDictionary system/controlDict -entry startTime -set $timeInstance
+foamDictionary system/controlDict -entry writeControl -set timeStep
+
+# Remove the NCC patches
+sed -i 's/nonConformalError;/patch;/g' constant/polyMesh/boundary
+sed -i 's/nonConformalCyclic;/patch;/g' constant/polyMesh/boundary
+
+# Run the createZones
+createZones -zonesGenerator
+
+# Modify engineCompRatio line based on the presence of cellZone
+if [ -n "$cellZone" ]; then
+    engineCompRatio -cellZone "$cellZone" -noFunctionObjects > log.engineCompRatio
+else
+    engineCompRatio -noFunctionObjects > log.engineCompRatio
+fi
+tail -n 5 log.engineCompRatio | tee -a log.engineCompRatio
+popd > /dev/null
+rm -rf $TMP_DIR

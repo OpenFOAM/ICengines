@@ -1,0 +1,41 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      zonesGenerator;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// A combustionChamber cellZone for calculating pressure, temperature etc.
+chamber
+{
+    $engineDict!meshControl/regionRefinement/chamber
+    zoneType    cell;
+}
+
+coneRefinement
+{
+    $engineDict!meshControl/regionRefinement/coneRefinement
+    zoneType    point;
+}
+
+cylinderHead
+{
+    type        cylinderHeadPoints;
+}
+
+pistonBowl
+{
+    type        pistonBowlPoints;
+}
+
+// ************************************************************************* //
+

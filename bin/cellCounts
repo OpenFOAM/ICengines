@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# cellCounts - Plot mesh cell count vs instant
+#
+# Usage:
+#   ./cellCounts [-region REGION_NAME]
+#
+# Description:
+#   Scans constant/meshes/* for log.checkMesh files.
+#   Extracts the number of cells (in millions) and instant.
+#   Prints checkMesh passed/failed and failed check types.
+#   Generates cell_count_plot.png.
+#
+
+REGION=""
+[ "$1" = "--help" ] && { grep '^# ' "$0" | cut -c4-; exit 0; }
+
+# parse minimal region flag
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -region)
+            REGION="$2"
+            shift 2
+            ;;
+        -help)
+            grep '^# ' "$0" | cut -c4-
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+tmpdata=$(mktemp)
+count=0
+
+# Collect data in ascending numeric order of instant
+for inst in $(find constant/meshes -mindepth 1 -maxdepth 1 -type d \
+              | awk -F'/' '{print $NF}' | sort -n); do
+  dir="constant/meshes/$inst"
+  [[ -n "$REGION" ]] && dir="$dir/$REGION"
+
+  log="$dir/log.checkMesh"
+  [[ -f "$log" ]] || continue
+  ((count++))
+
+  # extract cell count
+  cells=$(awk '/cells:/ {printf "%.2f", $2 / 1e6}' "$log")
+  echo "$inst $cells" >> "$tmpdata"
+
+  # extract failure lines (inline, semicolon-separated)
+  fails=$(grep '^ \*\*\*' "$log" | sed 's/^ \*\*\*//;s/  */ /g' | tr '\n' ';')
+  fails=${fails%;}  # remove trailing semicolon
+  nfails=$(grep -c '^ \*\*\*' "$log")
+
+  # print summary
+  if grep -q "Mesh OK." "$log"; then
+      printf "%8s  %7s M  checkMesh passed\n" "$inst" "$cells"
+  else
+      printf "%8s  %7s M  checkMesh FAILED (%d): %s\n" "$inst" "$cells" "$nfails" "$fails"
+  fi
+done
+
+# Abort if no data found
+if [[ $count -eq 0 ]]; then
+  echo "Error: No log.checkMesh files found in constant/meshes/*"
+  rm -f "$tmpdata"
+  exit 1
+fi
+
+# Determine range from first and last instant
+xmin=$(awk 'NR==1{print $1}' "$tmpdata")
+xmax=$(awk 'END{print $1}' "$tmpdata")
+
+# Generate plot
+gnuplot <<EOF
+set term pngcairo size 1000,600 enhanced font 'Arial,12'
+set output "cell_count_plot.png"
+set title "Mesh Cell Count vs Instant"
+set xlabel "Instant"
+set ylabel "Cells (millions)"
+set grid
+set key off
+set xrange [$xmin:$xmax]
+plot "$tmpdata" using 1:2 with lines lw 2 lc rgb "black", \
+     "$tmpdata" using 1:2 with points pt 7 ps 1.5 lc rgb "red"
+EOF
+
+rm -f "$tmpdata"

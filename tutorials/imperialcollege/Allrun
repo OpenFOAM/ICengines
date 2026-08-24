@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+cd ${0%/*} || exit 1 # Run from this directory
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+NSLOTS="${NSLOTS:-4}"
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
+ls constant/meshes | sort -n >constant/meshTimes
+
+START_TIME=0
+END_TIME=2160
+foamDictionary -set "startTime=${START_TIME},endTime=${END_TIME}" \
+    system/controlDict
+cp -r constant/meshes/$START_TIME/polyMesh constant/
+cp -r 0.orig $START_TIME
+
+runApplication -o createZones -zonesGenerator
+
+# Run decomposePar using gnu-parallel for all meshes in constant/meshes
+runApplication -o decomposePar
+cat constant/meshTimes | parallel --memfree 1G -j 10 "decomposePar -mesh {}"
+
+# If you do not have gnu-parallel installed, use a serialized loop instead:
+#for meshDir in constant/meshes/*
+#do
+#    runApplication -a decomposePar -mesh "$(basename "$meshDir")"
+#done
+
+runParallel -a foamRun

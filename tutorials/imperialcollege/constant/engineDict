@@ -1,0 +1,188 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      engineDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+times (#includeIfPresent "${FOAM_CASE}/constant/meshTimes");
+
+remeshControl
+{
+    startInstant              0;
+    endInstant              720;
+    stepSize                0.01;
+    forcedRemeshInstants    (0);
+}
+
+meshControl
+{
+    cellSize 0.016;
+
+    insidePoints ((0.01 0 0.1)(0.01 0 -0.005));
+
+    patchInfo
+    {
+        inGroups    staticWall;
+    }
+
+    surfaceRefinement 2;
+
+	regionRefinement
+	{
+		coneRefinement
+        {
+            type    truncatedCone;
+            point1  (0 0 0.01);
+            point2  (0 0 -0.007);
+            radius1  0.02;
+            radius2  0.025;
+            level   3;
+        }
+
+        chamber
+		{
+			type    cylinder;
+			point1  (0 0 0);
+			point2  (0 0 -1);
+			radius  0.1;
+			level	2;
+		}
+
+		chamber_refinement
+		{
+			$chamber;
+            begin   700;
+            end     50;
+            repeat  720;
+            level   3;
+		}
+	}
+
+    layerControl
+    {
+        // Boundary layer control
+        addLayers true;
+        nSurfaceLayers 1;
+        firstLayerThickness    0.5;
+        expansionRatio    1.2;
+    }
+}
+
+patches
+{
+    piston
+    {
+        surfaces       (piston);
+
+        geometryMotion
+        {
+            type translationMotion;
+
+            axis   (0 0 1);
+
+            initialPosition 0;
+
+            motion
+            {
+
+                type            crankConnectingRodMotion;
+                conRodLength    100000;
+                stroke          0.06;
+            }
+
+            remeshControl
+            {
+                absTolerance                #calc "($motion/stroke)*0.25";
+                relTolerance                0.5;
+                clearance                   0.03;
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            layerControl
+            {
+                nSurfaceLayers 2;
+            }
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+        }
+    }
+
+    valve
+    {
+        surfaces       ("valve.*");
+
+        meshControl
+        {
+            surfaceRefinement 3;
+
+            surfaceControl
+            {
+                "(.*bottom|.*side)"
+                {
+                    distanceRefinement ((0.004 4));
+                }
+            }
+            layerControl
+            {
+                nSurfaceLayers 2;
+            }
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+        }
+    }
+
+    liner
+    {
+        surfaces       (liner);
+
+        geometryMotion
+        {
+            type scalingMotion;
+
+            axis   (0 0 -1);
+
+            motion
+            {
+                $../../../piston/geometryMotion/motion;
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            distanceRefinement ((0.001 5) (0.002 4));
+        }
+    }
+
+    outlet
+    {
+        surfaces       (outlet);
+        meshControl
+        {
+            patchInfo
+            {
+                patchType   patch;
+                inGroups    outlet;
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

@@ -1,0 +1,184 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      functions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Write valve, piston and cylinder state during simulation
+#includeFunc    multiValveEngineState
+
+// Checks mesh quality every 10 timesteps
+#includeFunc    checkMesh(executeControl=timeStep, executeInterval=10)
+
+// Solves a passive scalar transport equation (tracer species)
+#includeFunc    scalarTransport(tracer)
+
+// Writes planar field slices for visualization
+#includeFunc    cutPlanes
+
+// Writes patch surfaces (valve, piston, etc.) every 5 units of run time
+#includeFunc    patchSurface(name=engineSurfaces, patch="(iv|ev|piston|liner).*",
+                writeControl=adjustableRunTime, writeInterval=5)
+
+// Reports CPU time cumulative and per timestep
+#includeFunc    time(name=cpuTime, perTimeStep=yes)
+
+// Writes user-defined time step (CAD value)
+#includeFunc    userTimeStep
+
+// Monitors Courant number every timestep
+#includeFunc    CourantNo(executeControl=timeStep, executeInterval=1, executeAtStart=false)
+
+// Maximum Courant number in the domain
+#includeFunc cellMax
+(
+    name=Co_max,
+    fields=(Co)
+)
+
+// Volume-averaged pressure & temperature in intake port zone
+#includeFunc volAverage
+(
+    name=intakePort_pTAvg,
+    fields=(p T),
+    select=cellZone,
+    cellZone=intakePort
+)
+
+// Maximum pressure & temperature in intake port zone
+#includeFunc cellMax
+(
+    name=intakePort_pTMax,
+    fields=(p T),
+    select=cellZone,
+    cellZone=intakePort
+)
+
+// Minimum pressure & temperature in intake port zone
+#includeFunc cellMin
+(
+    name=intakePort_pTMin,
+    fields=(p T),
+    select=cellZone,
+    cellZone=intakePort
+)
+
+// Volume-averaged pressure & temperature in exhaust port zone
+#includeFunc volAverage
+(
+    name=exhaustPort_pTAvg,
+    fields=(p T),
+    select=cellZone,
+    cellZone=exhaustPort
+)
+
+// Maximum pressure & temperature in exhaust port zone
+#includeFunc cellMax
+(
+    name=exhaustPort_pTMax,
+    fields=(p T),
+    select=cellZone,
+    cellZone=exhaustPort
+)
+
+// Minimum pressure & temperature in exhaust port zone
+#includeFunc cellMin
+(
+    name=exhaustPort_pTMin,
+    fields=(p T),
+    select=cellZone,
+    cellZone=exhaustPort
+)
+
+// Volume-averaged pressure & temperature in combustion chamber zone
+#includeFunc volAverage
+(
+    name=chamber_pTAvg,
+    fields=(p T),
+    select=cellZone,
+    cellZone=chamber
+)
+
+// Maximum pressure & temperature in combustion chamber zone
+#includeFunc cellMax
+(
+    name=chamber_pTMax,
+    fields=(p T),
+    select=cellZone,
+    cellZone=chamber
+)
+
+// Minimum pressure & temperature in combustion chamber zone
+#includeFunc cellMin
+(
+    name=chamber_pTMin,
+    fields=(p T),
+    select=cellZone,
+    cellZone=chamber
+)
+
+// Integrated trapped mass in chamber (rho*V)
+#includeFunc    volIntegrate(
+    fields=(rho),
+    select=cellZone,
+    cellZone=chamber,
+    name=trappedMass
+)
+
+// Stops run if minimum deltaT < 1e-12 and writes data immediately
+#includeFunc stopAtTimeStep(minDeltaT=1e-12, action=writeNow)
+
+fluidMaxDeltaT
+{
+    type            fluidMaxDeltaT;
+    EVO 136;
+    EVC 357;
+    IVO 365;
+    IVC 586;
+
+    dT  $controlDict!maxDeltaT;
+    dT_valve    #calc "$dT*0.1";
+
+    maxCo
+    {
+        type            table;
+        values
+        (
+            ( 0 3 )
+            ( $EVO 10 )
+            ( $IVO 5 )
+            ( $IVC 3 )
+            ( 720 3 )
+        );
+        interpolationScheme step;
+        outOfBounds     repeat;
+    }
+    maxDeltaT
+    {
+        type            table;
+        values
+        (
+            ( 0                 $dT )
+            ( 125               $dT_valve )
+            ( $EVO              $dT_valve )
+            ( #calc "$EVO+2"    $dT )
+            ( $IVO              $dT_valve )
+            ( #calc "$IVO+2"    $dT )
+            ( 720               $dT )
+        );
+        interpolationScheme step;
+        outOfBounds     repeat;
+    }
+}
+
+// ************************************************************************* //

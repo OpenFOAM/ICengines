@@ -3,7 +3,7 @@
 # AATE: Advanced Analysis Tool for Engines
 
 ## Introduction
-AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework designed for industrial-scale engine CFD simulations. This toolset is developed by the Thermofluids and Simulations team at Wartsila Finland.
+AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework for industrial-scale engine CFD simulations. This toolset is developed by the Thermofluids and Simulations team at Wartsila Finland.
 
 ## Prerequisites
 Before using AATE, make sure you have the following installed:

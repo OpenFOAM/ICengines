@@ -1,0 +1,48 @@
+# Units: 
+# - length [m]
+# - pressure [Pa]
+# - spatial angle [deg]
+# - CAD [deg]
+# - SOI and EOI: [CAD w.r.t TDC]
+# - Cd: [-]
+# - mass: [kg]
+# - clearance: [m], follows OpenFOAM definition
+
+engine: 
+    name: "engineName"
+    unit: "m"
+    connectingRodLength: 0.7
+    bore: 0.3
+    stroke: 0.34
+    clearance: 0.0
+    compressionRatio: 12
+    rpm: 900.0
+valves:
+    IV:
+        origin: [0, 0, 0]
+        axis: [0, 0, 1]
+        minGap: 2.0e-4
+        unit: "m"
+    EV:
+        origin: [0, 0, 0]
+        axis: [0, 0, 1]
+        minGap: 2.0e-4
+        unit: "m"
+
+    # If separate def. required
+    # IV-B:
+    #    ...
+
+injector:
+    name: "nozzle"
+    unit: "m"
+    position: [0.1,0.2,-0.2]
+    holePositionRadius: 0.003 
+    umbrellaAngle: 140
+    nHoles:             8
+    holeDiamater:       100.0e-6
+    injectionPressure:  130e6
+    SOI:                -10
+    EOI:                15.5
+    Cd:                 0.9
+    totalMass:          100.0e-6

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=40"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyaate"
+version = "0.0.1"
+description = "A Python library for Wärtsilä Internal Combustion Engine analysis (CFD pre and post-processing)."
+readme = "README.md"
+license = { text = "GPL-3.0" }
+requires-python = ">=3.6"
+dependencies = [
+    "matplotlib>=2.2.5",
+    "numpy>=1.16.6",
+    "pandas>=0.24.2",
+    "ruamel.yaml==0.16.9",
+    "scipy>=1.2.3",
+    "h5py>=2.9.0",
+    "lxml>=4.4.2",
+    "numpy-stl>=2.16.3",
+    "pathlib2>=2.3.6",
+]
+
+[project.optional-dependencies]
+examples = [
+    "pyevtk",
+    "vtk",
+]
+
+[project.urls]
+Homepage = "https://github.com/OpenFOAM/ICengines/tree/master/AATE"
+
+[tool.setuptools.packages.find]
+where = ["."]
+

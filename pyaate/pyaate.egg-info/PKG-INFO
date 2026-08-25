@@ -1,0 +1,81 @@
+Metadata-Version: 2.4
+Name: pyaate
+Version: 0.0.1
+Summary: A Python library for Wärtsilä Internal Combustion Engine analysis (CFD pre and post-processing).
+Home-page: https://github.com/OpenFOAM/ICengines/tree/master/AATE
+Author: Wärtsilä Finland
+License: GPL-3.0
+Project-URL: Homepage, https://github.com/OpenFOAM/ICengines/tree/master/AATE
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Requires-Dist: matplotlib>=2.2.5
+Requires-Dist: numpy>=1.16.6
+Requires-Dist: pandas>=0.24.2
+Requires-Dist: ruamel.yaml==0.16.9
+Requires-Dist: scipy>=1.2.3
+Requires-Dist: h5py>=2.9.0
+Requires-Dist: lxml>=4.4.2
+Requires-Dist: numpy-stl>=2.16.3
+Requires-Dist: pathlib2>=2.3.6
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
+# pyaate - A Python library for Wärtsilä Internal Combustion Engine analysis
+
+## Installation
+
+### Using uv (recommended)
+
+```bash
+cd path/to/pyaate
+uv venv --python python3.11
+source .venv/bin/activate
+uv pip install -e .
+```
+
+> **Note:** Python 3.11 or newer is required when using `uv`. The default system Python (3.6) is too old for uv's editable install support.
+
+### Using pip + venv
+
+```bash
+cd path/to/pyaate
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### Using conda
+
+```bash
+conda create --name pyaate python=3.11
+conda activate pyaate
+pip install -e path/to/pyaate
+```
+
+## Requirements
+- Python >= 3.7 is required (3.11+ recommended).
+- Dependencies are declared in `pyproject.toml` and installed automatically.
+
+## Run tests:
+```
+cd pyaate/pyaate/
+python -m unittest discover -b
+```
+
+## Introduction of features
+This package can be utilised in a versatile manner in combustion simulation pre- / post-processing as well as general engine related analysis. Implementation has functions and/or scripts for following features:
+- Object-oriented definition and control of engine related objects:
+    - Easy access to engine geometry details.
+    - injector and valve objects per engine type.
+    - consistent definition of piston position, valve profiles etc.
+- OpenFOAM related case control:
+    - Read any OpenFoam format dictionary in a recursive manner.
+    - Provide specific OpenFoam dictionary entries in an automated manner based on case setup.
+    - Read functionObject-based data in a consistent manner and treat corner cases.
+
+
+## Contributors
+- Heikki Kahila D.Sc. (Tech.), original development of the framework
+- Bulut Tekgül D.Sc. (Tech.), new features, extensions, bugfixes, maintenance
+- Daniel Virokannas, extensions, bugfixes

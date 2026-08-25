@@ -3,12 +3,13 @@
 # AATE: Advanced Analysis Tool for Engines
 
 ## Introduction
-AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework for industrial-scale engine CFD simulations. This toolset is developed by the Thermofluids and Simulations team at Wartsila Finland.
+AATE (`/ˈɑːteˣ/`) is an OpenFOAM-based framework designed for industrial-scale engine CFD simulations. This toolset is developed by the Thermofluids and Simulations team at Wartsila Finland.
 
 ## Prerequisites
 Before using AATE, make sure you have the following installed:
 
 - OpenFOAM-14
+- Python 3.11 or newer is recommended for the optional `pyaate` utilities
 
 ## Build
 This project uses an `Allwmake` script to build all libraries and applications.
@@ -22,6 +23,35 @@ To remove compiled object files:
 ```bash
 wclean all
 ```
+
+## Python Utilities
+
+The `pyaate` package provides Python utilities for OpenFOAM data processing:
+
+- Reading OpenFOAM dictionaries into Python data structures
+- Loading function-object and probe output into pandas data frames
+- Combining overlapping data from restarted simulations
+- Parsing time and Lagrangian spray data from solver logs
+
+Install the package in an isolated environment from the repository root:
+
+```bash
+cd pyaate
+uv venv --python python3.11
+source .venv/bin/activate
+uv pip install -e .
+```
+
+Example:
+
+```python
+from pyaate.openfoam.function_objects import load_data
+
+residuals = load_data("postProcessing/residuals", append=True)
+```
+
+See [pyaate/README.md](pyaate/README.md) for the full installation options,
+OpenFOAM requirements, VTK example dependencies, and test instructions.
 
 ## Tutorials
 AATE currently provides two main tutorial cases.
@@ -66,6 +96,7 @@ The repository follows a standard OpenFOAM-style structure:
 - `tutorials/` - Validation and demonstration cases
 - `bin/` - Utility shell scripts
 - `etc/` - Environment and compilation helper scripts
+- `pyaate/` - Python utilities for OpenFOAM data processing
 
 ## Links and References
 - TCC-III setup and snappy meshing strategy originates from the master thesis work of Mr. Bishal Shrestha (Aalto University):

@@ -86,4 +86,7 @@ build/
 *.slurm
 *.sge
 
+# python releated
+__pycache__/
+pyaate.egg-info/
 tcc3_fine/

@@ -32,12 +32,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: pyaate/pyproject.toml
           python-version: "3.11"
-          cache: pip
-          cache-dependency-path: pyaate/pyproject.toml
 
       - name: Install OpenFOAM 14
         run: |
@@ -74,15 +74,16 @@ jobs:
           ./Allwmake -j
 
       - name: Build and install pyaate
+        working-directory: pyaate
         run: |
-          python -m pip install --upgrade pip build
-          python -m build pyaate
-          python -m pip install -e ./pyaate
+          uv build
+          uv sync
 
       - name: Run pyaate tests
+        working-directory: pyaate
         run: |
           source /opt/openfoam14/etc/bashrc
-          python -m unittest discover -s pyaate/pyaate/tests -b
+          uv run python -m unittest discover -s pyaate/tests -b
 
       - name: Show compiled artifacts
         run: |

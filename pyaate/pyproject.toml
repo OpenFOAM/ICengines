@@ -6,9 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "pyaate"
 version = "0.0.1"
 description = "A Python library for Wärtsilä Internal Combustion Engine analysis (CFD pre and post-processing)."
+authors = [
+    { name = "Wärtsilä Finland" },
+]
 readme = "README.md"
 license = { text = "GPL-3.0" }
 requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GPL-3.0 License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "matplotlib>=2.2.5",
     "numpy>=1.16.6",

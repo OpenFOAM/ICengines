@@ -1,0 +1,153 @@
+#include "engineDict.coarse"
+
+meshControl
+{
+    regionRefinement
+    {
+        chamber
+        {
+            level       4;
+        }
+
+        chamber_combustion
+        {
+            level       5;
+        }
+    }
+
+    layerControl
+    {
+        addLayers   true;
+    }
+}
+
+patches
+{
+    piston
+    {
+        meshControl
+        {
+            surfaceRefinement 6;
+
+            layerControl
+            {
+                nSurfaceLayers  2;
+            }
+        }
+    }
+
+    intakePort
+    {
+        meshControl
+        {
+            surfaceControl
+            {
+                IP_Pipe_Inlet  { surfaceRefinement 5;}
+                IP_Wall_Pipe  { surfaceRefinement 5;}
+                "IP_Seat.*"   { surfaceRefinement 5;}
+            }
+
+        }
+    }
+
+    exhaustPort
+    {
+        meshControl
+        {
+            surfaceRefinement 5;
+        }
+    }
+
+    liner
+    {
+        meshControl
+        {
+            surfaceRefinement 6;
+
+            layerControl                                                         
+            {                                                                    
+                nSurfaceLayers  2;                                               
+            }      
+        }
+    }
+
+    iv_stem
+    {
+        meshControl
+        {
+            surfaceRefinement 5;
+        }
+    }
+
+    iv_head
+    {
+        meshControl
+        {
+            surfaceControl
+            {
+                "IV_Seat.*"
+                {
+                    dynamicRefinement   true;
+                    numberOfCells       5;
+                }
+            }
+  
+            layerControl
+            {
+                nSurfaceLayers  2;
+            }
+        }
+    }
+
+    ev_stem
+    {
+        meshControl
+        {
+            surfaceRefinement 5;
+        }
+    }
+
+    ev_head
+    {
+        meshControl
+        {
+            surfaceControl
+            {
+                "EV_Seat.*"
+                {
+                    dynamicRefinement   true;
+                    numberOfCells       5;
+                }
+            }
+
+            layerControl
+            {
+                nSurfaceLayers  2;
+            }
+        }
+    }
+
+    sparkplug
+    {
+        meshControl
+        {
+            surfaceRefinement 5;
+
+            layerControl
+            {
+                nSurfaceLayers  2;
+            }
+        }
+    }
+
+    cylinderhead
+    {
+        meshControl
+        {
+            layerControl
+            {
+                nSurfaceLayers  2;
+            }
+        }
+    }
+}

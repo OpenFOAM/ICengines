@@ -1,0 +1,84 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      zonesGenerator;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * /
+
+sparkPlug
+{
+    type            cylinder;
+    point1          (0 0 0);
+    point2          (0 0 0.1);
+    radius          0.01;
+    zoneType        cell;
+}
+
+chamber
+{
+    type        union;
+    chamber
+    {
+        $engineDict!meshControl/regionRefinement/chamber;
+        zoneType    cell;
+    }
+    sparkPlug;
+}
+
+exhaustPort
+{
+    type            box;
+    box             (-0.0431018  -0.0150694  0.001)  (-0.0128983  0.103  0.07908);
+    zoneType        cell;
+}
+
+
+intakePort
+{
+    type            difference;
+    all
+    {
+        type            box;
+        box             (-10 -10 -10)  (10 10 10);
+        zoneType        cell;
+    }
+    exhaustPort;
+    chamber;
+    sparkPlug;
+}
+
+
+
+// cylinderHead and pistonBowl pointZones for mesh mover control
+// define pistonBowl so that the pistonBowl is NOT frozen
+// near TDC to control deformation better
+cylinderHead
+{
+    type        cylinderHeadPoints;
+    moveUpdate  true;
+}
+
+pistonBowl
+{
+    type        periodic;
+    begin       -40;
+    end         40;
+    deactivate  true;
+    repeat      720;
+    pistonBowl
+    {
+        type        pistonBowlPoints;
+    }
+}
+
+// ************************************************************************* //
+

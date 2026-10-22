@@ -1,0 +1,79 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+mover
+{
+    type                                multiValveEngine;
+    libs                                ( "libfvMeshMoversMultiValveEngine.so" );
+    slidingPatches                      (liner ".*stem.*");
+    linerPatches                        (liner);
+    piston
+    {
+        patches                         (piston);
+        axis                            ${engineDict!patches/piston/geometryMotion/axis};
+        motion
+        {
+            ${engineDict!patches/piston/geometryMotion/motion};
+        }
+
+        frozenZones                     (cylinderHead);
+        movingZones                     (pistonBowl);
+
+        movingFrozenLayerThickness      0.0001;
+        travelInterval                  #calc "$motion/stroke * 0.05";
+        cosineScale   0.8;
+    }
+
+    valves
+    {
+        intakeValve
+        {
+            patches                     (iv_head);
+            axis                        ${engineDict!patches/iv_head/geometryMotion/axis};
+            minLift                     ${engineDict!patches/iv_head/geometryMotion/minLift};
+
+            motion
+            {
+                ${engineDict!patches/iv_head/geometryMotion/motion};
+            }
+        }
+
+        exhaustValve
+        {
+            patches                     (ev_head);
+            axis                        ${engineDict!patches/ev_head/geometryMotion/axis};
+            minLift                     ${engineDict!patches/ev_head/geometryMotion/minLift};
+
+            motion
+            {
+                ${engineDict!patches/ev_head/geometryMotion/motion};
+            }
+        }
+    }
+
+}
+
+topoChanger
+{
+    type                                meshToMesh;
+    libs                                ( "libmeshToMeshTopoChanger.so" );
+    times                               ( #include "$FOAM_CASE/constant/meshTimes" );
+    repeat                              720;
+    timeDelta                           1e-06;
+}
+
+
+// ************************************************************************* //

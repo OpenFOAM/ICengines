@@ -139,7 +139,7 @@ if [[ "${scheduler}" == "slurm" ]]; then
 #SBATCH --output=log.%j.out
 #SBATCH --error=log.%j.err
 echo \"Utilizing: \${SLURM_NTASKS} cores across ${NODES} node(s)\"
-source /projappl/project_462000885/opt/aate/etc/lumi.env
+source /projappl/project_462000885/opt/aate/etc/lumi.env dev-stable
 
 cd \"\$SLURM_SUBMIT_DIR\" || exit 1
 NSLOTS=\$SLURM_NTASKS
@@ -160,7 +160,7 @@ NSLOTS=\$SLURM_NTASKS
 #SBATCH --output=log.%j.out
 #SBATCH --error=log.%j.err
 echo \"Utilizing: \$SLURM_NTASKS cores\"
-source /projappl/project_462000885/opt/aate/etc/lumi.env
+source /projappl/project_462000885/opt/aate/etc/lumi.env dev-stable
 
 cd \"\$SLURM_SUBMIT_DIR\" || exit 1
 NSLOTS=\$SLURM_NTASKS
@@ -177,7 +177,7 @@ NSLOTS=\$SLURM_NTASKS
 #SBATCH --output=log.%j.out
 #SBATCH --error=log.%j.err
 echo \"Utilizing: \$SLURM_NTASKS cores\"
-source /projappl/project_462000885/opt/aate/etc/lumi.env
+source /projappl/project_462000885/opt/aate/etc/lumi.env dev-stable
 
 cd \"\$SLURM_SUBMIT_DIR\" || exit 1
 NSLOTS=\$SLURM_NTASKS

@@ -181,7 +181,7 @@ patches
             }
             surfaceControl
             {
-                "PN_Crevice.*" { surfaceRefinement 4; }  // DEBUG: réduit de 7
+                "PN_Crevice.*" { surfaceRefinement 5; }  // v0: 7 causait un sur-raffinement en cascade (6 µm)
             }
         }
     }
@@ -228,7 +228,7 @@ patches
             {
                 // Raffinements différenciés par STL :
                 IP_Wall     { surfaceRefinement 2; }
-                "IP_Seat.*" { surfaceRefinement 2; }   // DEBUG
+                "IP_Seat.*" { surfaceRefinement 3; }   // v0
             }
         }
     }
@@ -244,7 +244,7 @@ patches
 
             surfaceControl
             {
-                "EP_Seat.*"   { surfaceRefinement 2; }
+                "EP_Seat.*"   { surfaceRefinement 3; }
             }
         }
     }

@@ -37,11 +37,15 @@ Dériver le cas `tcc3` (TCC-III, moteur 4-temps, 2 soupapes) vers un moteur à
 - le **piston** (`PN_Topland`, `PN_Crevice`) et la **chemise** (`LN_Wall`) de tcc3,
 - la méthodologie de remaillage AATE (multi-maillages + interpolation `meshToMesh`).
 
-Simplifications décidées :
+Décisions de découpage CAO (v0) :
 
-- sièges de soupape en **1 seule tranche** (tcc3 en utilise 3, voir §12),
-- conduits admission/échappement en **2 fichiers chacun** (mur + bride, voir §17),
-- **bougie** : paroi plate fusionnée dans la culasse en v0 (pas de STL dédié),
+- soupapes : **5 fichiers par soupape** (`Stem`, `Angle`, `Seat`, `Bottom`,
+  `Bottom_Side`), comme tcc3 — voir §17 ;
+- sièges (dans la culasse, côté conduit) : **1 seule tranche** par soupape
+  (tcc3 en utilise 3, voir §12) → `Seat_1`, `Seat_2` par conduit ;
+- conduits admission/échappement : **4 fichiers par conduit** (`Inlet`/`Outlet`,
+  `Wall` commun aux 2 soupapes du conduit, `Seat_1`, `Seat_2`) ;
+- **bougie** : paroi plate fusionnée dans la culasse en v0 (pas de STL dédié) ;
 - soupapes modélisées **fermées** dans la CAO (`initialPosition 0` partout, voir §13).
 
 ## 2. Comment la géométrie est construite à partir des STL
@@ -350,22 +354,29 @@ Utile comme point de départ pour une géométrie simple ou des tests rapides.
 | `PN_Crevice.stl` | Piston — crevice (mobile) |
 | `LN_Wall.stl` | Chemise (scaling) |
 
-**À fournir (25)** :
+**À fournir (33)** :
 
 | Catégorie | Fichiers | Détail |
 |---|---|---|
 | Culasse | `HD_Wall.stl` (1) | 4 puits de soupape, bougie en paroi plate intégrée (v0) |
-| Soupapes | 4 × `IV1/IV2/EV1/EV2` × `Stem/Angle/Bottom/Seat` (16) | **CAO fermées**, `initialPosition 0` |
-| Conduits | `IP_Wall.stl`, `IP_Inlet.stl`, `EP_Wall.stl`, `EP_Outlet.stl` (4) | mur (paroi fixe, sièges fusionnés) + bride (patch inlet/outlet) |
-| ValveCut | `supportSurfaces/IV1/IV2/EV1/EV2_ValveCut.stl` (4) | bouchons des puits de tiges, CAO soupape fermée |
+| Soupapes | 4 soupapes × 5 fichiers = **20** : `IV1/IV2/EV1/EV2` `_Stem`, `_Angle`, `_Seat`, `_Bottom`, `_Bottom_Side` | **CAO fermées**, `initialPosition 0` ; 5 fichiers comme tcc3 (raffinements distincts tige/face) |
+| Conduits admission | `IP_Inlet.stl`, `IP_Wall.stl`, `IP_Seat_1.stl`, `IP_Seat_2.stl` (**4**) | bride (patch inlet), mur **commun aux 2 soupapes**, 2 sièges à 1 tranche (paroi fixe) |
+| Conduits échappement | `EP_Outlet.stl`, `EP_Wall.stl`, `EP_Seat_1.stl`, `EP_Seat_2.stl` (**4**) | bride (patch outlet), mur commun, 2 sièges à 1 tranche |
+| ValveCut | `supportSurfaces/IV1/IV2/EV1/EV2_ValveCut.stl` (**4**) | bouchons des puits de tiges, CAO soupape fermée |
 
-**Abandonnés de tcc3** : `IP_Seat_Top/Middle/Bottom`, `EP_Seat_Top/Middle/Bottom`
-(3 tranches → sièges fusionnés dans les murs de conduits), `IV_Bottom_Side`,
-`EV_Bottom_Side` (fusionnés dans `Bottom`), `SP_Wall.stl` (paroi plate),
-`IV_Stem→IV1_Stem` etc. (renommage 2 soupapes → 4).
+**Total : 36 STL** (3 conservés + 33 à fournir).
+
+**Abandonnés/modifiés par rapport à tcc3** :
+
+- `IP_Seat_Top/Middle/Bottom` → `IP_Seat_1/2` (3 tranches → 1 tranche
+  par soupape, §12) ; idem `EP_Seat_*` ;
+- `IP_Wall_Pipe`, `IP_Plenum_*`, `IP_Pipe_Inlet` → un seul `IP_Wall.stl`
+  commun aux 2 soupapes d'admission ; idem côté échappement ;
+- `SP_Wall.stl` : paroi plate intégrée à `HD_Wall.stl` (bougie en v0) ;
+- renommage 2 → 4 soupapes : `IV_*` → `IV1_*`/`IV2_*`, `EV_*` → `EV1_*`/`EV2_*`.
 
 **Nomenclature** : préfixes soupape `IV1/IV2/EV1/EV2` ; les regex
-`"IV1_Seat.*"` etc. dans `engineDict` matchent les fichiers.
+`"IV1_Seat.*"`, `"IP_Seat.*"` etc. dans `engineDict` matchent les fichiers.
 
 **Dictionnaires à adapter** (détaillé §10) : `engineDict` (+`.coarse`/`.fine`),
 `dynamicMeshDict` (bloc `valves` : 4 entrées), `engineData` (CSV de levée ×4,
@@ -381,7 +392,8 @@ pressions), `zonesGenerator` (sans bougie, boîtes ports élargies), `Allmesh`
 |---|---|---|---|
 | 2026-10-22 | — | Copie intégrale de `tutorials/tcc3` → `tutorials/PIengine_v0` | Point de départ du nouveau cas |
 | 2026-10-22 | `README.md` | Création : documentation d'étude (ce fichier) | Traçabilité des choix et des questions |
-| (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, regex sièges 1 tranche, `sparkplug` supprimé, conduits 2 fichiers) | Adaptation à la nouvelle géométrie |
+| 2026-10-22 | `README.md` (§1, §17) | Découpage CAO finalisé : soupapes à 5 fichiers, conduits à 4 fichiers (`Inlet/Outlet` + `Wall` commun + `Seat_1`/`Seat_2` à 1 tranche) — 36 STL au total | Choix utilisateur |
+| (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, sièges à 1 tranche, `sparkplug` supprimé, conduits à 4 fichiers) | Adaptation à la nouvelle géométrie |
 | (à venir) | `constant/dynamicMeshDict` | Bloc `valves` : `intakeValve2`, `exhaustValve2` | Mover des 2 nouvelles soupapes |
 | (à venir) | `constant/engineData/` | CSV de levée ×4 + pressions | Lois propres à PIengine_v0 |
 | (à venir) | `constant/zonesGenerator` | Sans `sparkPlug`, ports adaptés | Cohérence avec la nouvelle culasse |

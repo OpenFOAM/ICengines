@@ -179,7 +179,7 @@ patches
             }
             surfaceControl
             {
-                "PN_Crevice.*" { surfaceRefinement 5; }  // v0: 7 causait un sur-raffinement en cascade (6 µm)
+                "PN_Crevice.*" { surfaceRefinement 6; }  // 4 cellules à travers le gap de 1mm (cf. tcc3: 0.3mm@L7=2.4 cell). L5 (2 cell.) = marginal -> fragmentation en îlots à 33.79°
             }
         }
     }

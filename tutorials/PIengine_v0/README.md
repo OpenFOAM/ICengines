@@ -431,6 +431,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `engineDict.{coarse,fine}` | **Erratum + vrai fix des 9023** : le revert EV n'a RIEN changé (résultat identique) — preuve que `patchRemesh` ne lit PAS `initialPosition` (il lit la table `motion` brute). Vraie cause : `clearance = minLift = 0,0005` dans les remeshControl des soupapes → seuil relatif = 0,35×(lift+0,5mm) ≈ 0,2–0,9 mm près de la fermeture → rafale à chaque degré des rampes (EVO 109°, etc.) ×4 soupapes ×2 événements = 9023. **Fix : `clearance 0.005`** (normalisateur ≈ levée max/2) dans les 4 blocs soupapes | Rafale du planning, 2e itération (cf. §21.14bis) |
 | 2026-11-03 | STL EV + `engineDict.{coarse,fine}` | **Bug 9023 remaillages corrigé** : le décalage EV (−1 mm + `initialPosition 0.001`, ajouté pendant la chasse à la fuite) annulait le dénominateur du critère relatif de remaillage (`relDisp = absDisp/(position + clearance)` avec `clearance = minLift = 0.0005` → dénominateur = `lift − 0.0005` → **zéro à lift = minLift**, la transition ouverte/fermée) → rafale d'instants à chaque pas (0,01°) pendant les rampes d'ouverture échappement (EVO ≈ 109°). Correctif : **décalage EV annulé** (STL +1 mm, `initialPosition 0` partout — CAO fermée comme l'admission) | Débordement du planning de remaillage (cf. §21.14) |
 | 2026-11-03 | bissection insidePoints | **RÉSOLU** : les 3 volumes maillent correctement ensemble avec le profil debug (raffinements réduits). Cause identifiée : le **sur-raffinement** (niveau 7 → cellules 0,125–6 µm) permettait aux cellules de pénétrer les interstices constructifs (fente 0,5 mm cône soupape/siège, jeu 0,4 mm bord de soupape/trou de culasse) qui, à maille normale, sont fermés par le snap → tout devenait connecté. **Profil v0 appliqué** : Crevice 5, sièges 3, distanceRefinement et dynamicRefinement désactivés (v0), insidePoints 3 points restaurés | Conclusion du débogage (cf. §21.13) |
 | 2026-11-03 | logs tcc3 debug + `engineDict.{coarse,fine}` | **Bilan du 1er maillage debug** : fuite PERSISTANTE prouvée par les logs (« Selected for keeping : 4016708/4091717 » = 98 % gardés ; patch background 3540 faces ; volume = 98,7 % du bloc) + **sur-raffinement massif** (4M cellules, niveau 7 dominant, min 6 µm — causé par PN_Crevice niv.7 + dynamicRefinement sur la fente siège 0,5 mm + shells). **Profil DEBUG appliqué** : Crevice 7→4, distanceRefinement off, dynamicRefinement off, sièges 4→2, têtes 4→3 ; bissection à venir via insidePoints (§21.13) | Diagnostic factuel par logs |
@@ -774,3 +775,18 @@ Règle : soit `initialPosition 0` (CAO fermée — choix PIengine_v0), soit
 s'assurer `clearance > initialPosition` dans le remeshControl. tcc3 est
 limite (0.00095 vs 0.0005) mais sa table de levée ne s'attarde pas dans la
 bande critique ; notre configuration avec tables partagées y est restée.
+
+### 21.14bis Erratum 9023 : le normalisateur `clearance`, pas `initialPosition`
+
+Test décisif : le revert EV (initialPosition 0.001→0) n'a strictement rien
+changé au planning (9023 identiques). `patchRemesh` ne lit pas
+`initialPosition` : il évalue la table `motion` (levée brute). Le déclencheur
+de la rafale était donc le **normalisateur** : `clearance = minLift = 0,0005`
+→ seuil relatif `0.35×(lift + 0.0005)` ≈ 0,2–0,9 mm de levée près de la
+fermeture → déclenchements multiples par degré sur les rampes de came
+(8 événements soupapes par cycle) → 9023 instants.
+
+Fix : `clearance 0.005` dans les 4 remeshControl soupapes (≈ la moitié de la
+levée max). Le critère devient : remailler quand la levée a bougé de
+max(1,5 mm ; 0,35×(lift+5 mm)) → quelques instants par rampe. Le revert EV
+est conservé (simplification : CAO fermée partout, initialPosition 0).

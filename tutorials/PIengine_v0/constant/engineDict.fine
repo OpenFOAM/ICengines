@@ -358,7 +358,7 @@ patches
                     #calc "${geometryMotion/minLift}+1e-5"  // juste après : instants
                                                        // critiques d'ouverture
                 );
-                clearance $geometryMotion/minLift;
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
             }
         }
 
@@ -432,7 +432,7 @@ patches
                     $geometryMotion/minLift
                     #calc "${geometryMotion/minLift}+1e-5"
                 );
-                clearance $geometryMotion/minLift;
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
             }
         }
 
@@ -518,7 +518,7 @@ patches
                     $geometryMotion/minLift
                     #calc "${geometryMotion/minLift}+1e-5"
                 );
-                clearance $geometryMotion/minLift;
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
             }
         }
 
@@ -590,7 +590,7 @@ patches
                     $geometryMotion/minLift
                     #calc "${geometryMotion/minLift}+1e-5"
                 );
-                clearance $geometryMotion/minLift;
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
             }
         }
 

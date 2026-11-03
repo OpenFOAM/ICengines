@@ -1,0 +1,629 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The last Op    \*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      engineDict.fine;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// ============================================================================
+// PIengine_v0 — engineDict.fine (maillage GROSSIER)
+// ----------------------------------------------------------------------------
+// Dictionnaire CENTRAL du cas : il définit
+//   1. les instants de calcul / remaillage (times, remeshControl),
+//   2. le contrôle global du maillage (meshControl),
+//   3. la liste des PATCHES : quelles STL forment quelle paroi, comment elles
+//      bougent (geometryMotion) et comment elles sont maillées (meshControl).
+//
+// CONVENTIONS :
+//   - Toute la simulation est en DEGRÉS VILEBREQUIN (CAD), 720° = 1 cycle
+//     (la conversion CAD -> secondes se fait via "rpm" dans system/controlDict).
+//   - Les STL sont dans constant/geometry/ (découverts automatiquement) ;
+//     "surfaces (...)" référence les NOMS DE FICHIERS sans extension (regex ok).
+//   - GEOMETRIE PIengine_v0 (mesurée sur les STL fournis) :
+//       * alésage          : R = 0.05 m   (liner x,y dans [-0.05, 0.05])
+//       * face de culasse  : plan z = -0.005 m (HD_Wall)
+//       * soupapes CAO FERMEES (initialPosition 0 partout), axes verticaux (0 0 1)
+//       * admission  : IV_1 (x>0) et IV_2 (x<0), cote y < 0 ; bride y = -0.055
+//       * échappement: EV_1 (x>0) et EV_2 (x<0), cote y > 0 ; bride y = +0.055
+//
+// TODO-USER : les valeurs marquées "TODO-USER" doivent être fournies/validées
+// par l'utilisateur (cinématique, clarances, levées).
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 1. INSTANTS DE CALCUL
+// ----------------------------------------------------------------------------
+// Liste des instants (CAD) pour lesquels un maillage sera généré.
+// "#includeIfPresent" : la liste est écrite par predictRemeshInstants dans
+// constant/meshTimes (ne pas remplir à la main — régénéré par Allmesh).
+times (#includeIfPresent "${FOAM_CASE}/constant/meshTimes");
+
+// ----------------------------------------------------------------------------
+// 2. CONTRÔLE DU REMAILLAGE (global)
+// ----------------------------------------------------------------------------
+remeshControl
+{
+    startInstant              0;      // CAD de début du cycle traité
+    endInstant              720;     // CAD de fin (720 = 1 cycle 4-temps)
+    stepSize                0.01;    // pas de balayage CAD pour prédire les remaillages
+    forcedRemeshInstants    (0 180 360);
+    // Instants CAD où un remaillage est FORCÉ, indépendamment des tolérances :
+    // ici les points morts (0/180/360°) où la déformation est maximale.
+}
+
+// ----------------------------------------------------------------------------
+// 3. CONTRÔLE GLOBAL DU MAILLAGE
+// ----------------------------------------------------------------------------
+meshControl
+{
+    // Taille de maille de base (blockMesh) avant tout raffinement [m].
+    // Les raffinements snappy divisent par 2 à chaque niveau (niveau N =
+    // cellSize/2^N). A adapter à l'échelle du moteur (alésage = 0.1 m).
+    cellSize 0.008;
+
+    // insidePoints : UN POINT PAR VOLUME FLUIDE (décidé aux Allmesh).
+    // Rôle : dire à snappyHexMesh QUEL volume mailler (équivalent multi-volumes
+    // du "locationInMesh"). Le point doit être DANS le fluide à TOUS les
+    // instants (le piston bouge !), loin des parois.
+    //   - point 1 : centre de la chambre (entre piston et culasse)
+    //   - point 2 : conduit d'admission (les volumes peuvent être déconnectés
+    //               de la chambre quand les soupapes sont fermées)
+    //   - point 3 : conduit d'échappement
+    // CAUTION : à repositionner si la position CAO du piston change
+    // (TODO-USER : valider après connaissance de la course).
+    insidePoints ((0 0 -0.013)(0 -0.045 0.03)(0 0.045 0.03));   // cf. engineDict.coarse pour les commentaires
+
+    // patchInfo PAR DÉFAUT : toute surface non listée dans "patches" ci-dessous
+    // hérite de ce groupe -> paroi fixe (noSlip, zeroGradient...). C'est le cas
+    // de la culasse, des conduits, des sièges...
+    patchInfo
+    {
+        inGroups    staticWall;
+    }
+
+    // Raffinement global de toutes les surfaces : niveau 2 (= cellSize/4).
+    surfaceRefinement 2;
+
+    // regionRefinement : raffinement par ZONES ANALYTIQUES (volumes, pas surfaces).
+    regionRefinement
+    {
+        // Zone cylindrique couvrant la chambre : héritée ci-dessous pour
+        // raffiner le volume de chambre (aérologie) sans toucher aux parois.
+        chamber
+        {
+            type    cylinder;         // forme analytique : cylindre
+            point1  (0 0 -0.005);     // TODO-USER : point sur l'axe (ici face culasse)
+            point2  (0 0 -1);         // 2e point de l'axe (vers le bas, vers le piston)
+            radius  0.05;             // rayon = alésage
+            level   2;                // niveau de raffinement dans la zone
+        }
+
+        // Exemple de zone TEMPorelle (activée par fenêtre CAD) pour une future
+        // combustion (raffinement accru autour de l'allumage) — désactivée en v0 :
+        // chamber_combustion
+        // {
+        //     $chamber;              // mêmes géométrie/position que chamber
+        //     begin   700;           // CAD d'activation
+        //     end     50;            // (fenêtre à cheval sur 720, repeat)
+        //     repeat  720;           // répétée chaque cycle
+        //     level   3;             // niveau pendant la fenêtre
+        // }
+    }
+
+    // Couches limites (prismes) sur les parois.
+    layerControl
+    {
+        addLayers   true;             // maillage fin : couches limites actives
+        nSurfaceLayers 1;
+        thickness 0.6;                // épaisseur relative
+        expansionRatio 1.2;          // taux d'expansion entre couches
+        minThickness 0.001;          // épaisseur minimale absolue [m]
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 4. PATCHES
+// ----------------------------------------------------------------------------
+// Chaque bloc = 1 patch OpenFOAM.
+//   surfaces       : STL (sans extension) composant le patch
+//   geometryMotion : mouvement de la pièce (sinon : fixe)
+//   meshControl    : raffinement/couches/groupes propres au patch
+
+patches
+{
+    // ======================== PISTON (mobile, translation) =================
+    piston
+    {
+        // 2 STL : couronne + crevice (conservés de tcc3)
+        surfaces       (PN_Topland PN_Crevice);
+
+        geometryMotion
+        {
+            type translationMotion;      // translation le long de "axis"
+
+            axis   (0 0 1);               // axe du moteur (vertical ici)
+            initialPosition 0;            // position CAD de référence = 0
+                                          // (déplacement(t) = valeur(t) - ceci ;
+                                          //  0 signifie : CAO = position au CAD 0)
+
+            motion
+            {
+                type            crankConnectingRodMotion; // cinématique bielle-manivelle
+                conRodLength    0.231;   // longueur de bielle [m] (gardée de tcc3)
+                stroke          0.086;   // course du piston [m] (gardée de tcc3)
+            }
+
+            remeshControl
+            {
+                // Déclenchement du remaillage par déplacement du piston :
+                // absTol = déplacement absolu max depuis le dernier maillage,
+                // relTol = fraction du déplacement précédent tolérée.
+                absTolerance                #calc "($motion/stroke)*0.25";
+                relTolerance                0.5;
+                clearance                   0.017;   // clarance morte (mesurée CAO : 17 mm)
+                                                   // piston-culasse au PMH [m]
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 2;          // niveau de raffinement de la couronne
+
+            patchInfo
+            {
+                inGroups    movingWall;   // CL "paroi mobile" (movingWallVelocity)
+            }
+            surfaceControl
+            {
+                "PN_Crevice.*" { surfaceRefinement 6; }  // 4 cellules à travers le gap de 1mm (cf. tcc3: 0.3mm@L7=2.4 cell). L5 (2 cell.) = marginal -> fragmentation en îlots à 33.79°
+            }
+        }
+    }
+
+    // ======================== LINER / CHEMISE (scaling) =====================
+    // La chemise est ETIRÉE quand le piston descend : sa géométrie STL couvre
+    // la course max et "scalingMotion" la met à l'échelle à chaque instant.
+    liner
+    {
+        surfaces       (LN_Wall);
+
+        geometryMotion
+        {
+            type    scalingMotion;         // mise à l'échelle le long de l'axe
+
+            axis   (0 0 -1);
+            // Le mouvement (course) est le MÊME que celui du piston -> héritage :
+            motion
+            {
+                $../../../piston/geometryMotion/motion;   // 3 niveaux: motion->geometryMotion->liner->patches
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;            // paroi cylindrique assez fine (jet tangenciel)
+            // DEBUG: distanceRefinement désactivée (était ((0.001 5) (0.002 4)))
+            // raffinement par distance à la paroi : à moins de 1 mm -> niveau 5,
+            // à moins de 2 mm -> niveau 4.
+        }
+    }
+
+    // ======================== CONDUIT D'ADMISSION (fixe) ====================
+    // Mur COMMUN aux 2 soupapes d'admission + les 2 sièges (1 tranche chacun).
+    intakePort
+    {
+        surfaces       (IP_Wall IP_Seat_1 IP_Seat_2);
+
+        meshControl
+        {
+            surfaceRefinement 1;
+
+            surfaceControl
+            {
+                // Raffinements différenciés par STL :
+                IP_Wall     { surfaceRefinement 2; }
+                "IP_Seat.*" { surfaceRefinement 3; }   // v0
+            }
+        }
+    }
+
+    // ======================== CONDUIT D'ÉCHAPPEMENT (fixe) ==================
+    exhaustPort
+    {
+        surfaces       (EP_Wall EP_Seat_1 EP_Seat_2);
+
+        meshControl
+        {
+            surfaceRefinement 3;
+
+            surfaceControl
+            {
+                "EP_Seat.*"   { surfaceRefinement 3; }
+            }
+        }
+    }
+
+    // ======================== BRIDE D'ENTRÉE (CL inlet) =====================
+    inlet
+    {
+        surfaces       (IP_Inlet);
+
+        meshControl
+        {
+            surfaceRefinement 2;
+            patchInfo
+            {
+                patchType   patch;          // vraie frontière (pas une paroi)
+                inGroups    inlet;          // groupe CL "inlet" (voir 0.orig/p, U)
+            }
+        }
+    }
+
+    // ======================== BRIDE DE SORTIE (CL outlet) ===================
+    outlet
+    {
+        $inlet;                             // héritage du bloc inlet
+        surfaces       (EP_Outlet);
+        meshControl
+        {
+            patchInfo
+            {
+                patchType   patch;
+                inGroups    outlet;         // groupe CL "outlet"
+            }
+        }
+    }
+
+    // ======================== CULASSE (fixe) ===============================
+    // NOTE : la bougie n'est pas modélisée en v0 (culasse plate HD_Wall).
+    cylinderhead
+    {
+        surfaces       (HD_Wall);
+
+        meshControl
+        {
+            surfaceRefinement 3;
+        }
+    }
+
+    // ======================== SOUPAPES D'ADMISSION ==========================
+    // 2 blocs par soupape, comme tcc3 :
+    //   ivN_stem : la TIGE (raffinement moyen, patch séparé pour le mover)
+    //   ivN_head : la TETE (Angle + Bottom + Bottom_Side + Seat) -> remaillé
+    //              aux ouvertures/fermetures (forcedRemeshPositions = minLift)
+
+    // ---- Soupape admission 1 ----
+    iv1_stem
+    {
+        surfaces       (IV_1_Steam);
+
+        geometryMotion
+        {
+            type    valveMotion;             // mouvement de soupape (levée)
+            axis    (0 0 1);                 // axe de la soupape (vertical)
+            minLift 0.0005;                  // (validé utilisateur) : levée minimale [m] — la
+                                              // soupape n'est JAMAIS modélisée
+                                              // totalement fermée ; évite les
+                                              // maillages dégénérés au contact
+            initialPosition 0;               // CAO soupape FERMÉE (mesuré : Bottom z=-0.0059)
+
+            motion
+            {
+                type            repeat;      // fonction périodique...
+                period          720;         // ...tous les 720° CAD
+                value
+                {
+                    type            table;   // ...table CSV
+                    format          csv;
+                    file            "$FOAM_CASE/constant/engineData/intakeLift.txt";
+                    nHeaderLine     2;       // 2 lignes d'en-tête à ignorer
+                    columns         ( 0 1 ); // (colonne CAD ; colonne levée)
+                    separator       ";";     // séparateur du CSV
+                    mergeSeparators yes;     // ";;" compté comme un ";"
+                    outOfBounds     repeat;  // au-delà de 720° : recommence le cycle
+                    interpolationScheme linear;
+                }
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+        }
+    }
+
+    iv1_head
+    {
+        $iv1_stem;                           // hérite de iv1_stem (motion, minLift)
+        // Tête de soupape 1 : 4 STL (partie conique, faces inf./flanc, portée)
+        surfaces       (IV_1_Angle "IV_1_Bottom.*" IV_1_Seat);
+
+        geometryMotion
+        {
+            remeshControl
+            {
+                absTolerance    0.0015;      // remaillage si levée varie de 1.5 mm
+                relTolerance    0.35;        // ...ou de 35% du saut précédent
+                forcedRemeshPositions
+                (
+                    $geometryMotion/minLift           // à la fermeture (lift = minLift)
+                    #calc "${geometryMotion/minLift}+1e-5"  // juste après : instants
+                                                       // critiques d'ouverture
+                );
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            surfaceControl
+            {
+                IV_1_Seat
+                {
+                    dynamicRefinement   false;   // DEBUG: désactivé (était true)
+                    numberOfCells       3;        // remaillage : 3 cellules À TRAVERS
+                                                // la fente soupape-siège
+                }
+            }
+        }
+
+        // Surface-bouchon : ferme le volume mort tige/guide quand la soupape
+        // est fermée (voir README §14). Un par soupape, CAO soupape fermée.
+        supportSurfaces
+        {
+            iv1SupportSurface
+            {
+                type        triSurface;
+                file        "supportSurfaces/IV_1_Cut.stl";
+            }
+        }
+    }
+
+    // ---- Soupape admission 2 ---- (identique, soupape miroir x<0, y<0)
+    iv2_stem
+    {
+        surfaces       (IV_2_Steam);
+
+        geometryMotion
+        {
+            type    valveMotion;
+            axis    (0 0 1);
+            minLift 0.0005;                  // (validé utilisateur)
+            initialPosition 0;
+
+            motion
+            {
+                $../../../iv1_stem/geometryMotion/motion;   // même loi que IV1 (3 niveaux -> patches)
+            }                                 // (TODO-USER : CSV séparé si levées
+        }                                    //  différentes entre IV1 et IV2)
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+        }
+    }
+
+    iv2_head
+    {
+        $iv2_stem;
+        surfaces       (IV_2_Angle "IV_2_Bottom.*" IV_2_Seat);
+
+        geometryMotion
+        {
+            remeshControl
+            {
+                absTolerance    0.0015;
+                relTolerance    0.35;
+                forcedRemeshPositions
+                (
+                    $geometryMotion/minLift
+                    #calc "${geometryMotion/minLift}+1e-5"
+                );
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            surfaceControl
+            {
+                IV_2_Seat
+                {
+                    dynamicRefinement   false;   // DEBUG
+                    numberOfCells       3;
+                }
+            }
+        }
+
+        supportSurfaces
+        {
+            iv2SupportSurface
+            {
+                type        triSurface;
+                file        "supportSurfaces/IV_2_Cut.stl";
+            }
+        }
+    }
+
+    // ======================== SOUPAPES D'ÉCHAPPEMENT ========================
+    // ---- Soupape échappement 1 ----
+    ev1_stem
+    {
+        surfaces       (EV_1_Steam);
+
+        geometryMotion
+        {
+            type    valveMotion;
+            axis    (0 0 1);
+            minLift 0.0005;                  // (validé utilisateur)
+            initialPosition 0;      // CAO EV fermée (décalage tcc3 abandonné : initialPosition 0.001
+                                        // annulait le dénominateur du critère relatif au PME -> 9023 remaillages)
+
+            motion
+            {
+                // ATTENTION : exhaustLift.txt est en MILLIMETRES -> scale 0.001
+                // (mm -> m), indispensable (oubli = levée 1000x trop grande :
+                // forcedPos déplacés, rafale d'instants, moveSurfaces faux)
+                type            scale;
+                scale           0.001;
+                value
+                {
+                    type            repeat;
+                    period          720;
+                    value
+                    {
+                        type            table;
+                        format          csv;
+                        file            "$FOAM_CASE/constant/engineData/exhaustLift.txt";
+                        nHeaderLine     2;
+                        columns         ( 0 1 );
+                        separator       ";";
+                        mergeSeparators yes;
+                        outOfBounds     repeat;
+                        interpolationScheme linear;
+                    }
+                }
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+        }
+    }
+
+    ev1_head
+    {
+        $ev1_stem;
+        surfaces       (EV_1_Angle "EV_1_Bottom.*" EV_1_Seat);
+
+        geometryMotion
+        {
+            remeshControl
+            {
+                absTolerance    0.0015;
+                relTolerance    0.35;
+                forcedRemeshPositions
+                (
+                    $geometryMotion/minLift
+                    #calc "${geometryMotion/minLift}+1e-5"
+                );
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            surfaceControl
+            {
+                EV_1_Seat
+                {
+                    dynamicRefinement   false;   // DEBUG
+                    numberOfCells       3;
+                }
+            }
+        }
+
+        supportSurfaces
+        {
+            ev1SupportSurface
+            {
+                type        triSurface;
+                file        "supportSurfaces/EV_1_Cut.stl";
+            }
+        }
+    }
+
+    // ---- Soupape échappement 2 ----
+    ev2_stem
+    {
+        surfaces       (EV_2_Steam);
+
+        geometryMotion
+        {
+            type    valveMotion;
+            axis    (0 0 1);
+            minLift 0.0005;                  // (validé utilisateur)
+            initialPosition 0;      // CAO EV fermée (décalage tcc3 abandonné : initialPosition 0.001
+                                        // annulait le dénominateur du critère relatif au PME -> 9023 remaillages)
+
+            motion
+            {
+                $../../../ev1_stem/geometryMotion/motion;   // même loi que EV1 (3 niveaux -> patches)
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            patchInfo
+            {
+                inGroups    movingWall;
+            }
+        }
+    }
+
+    ev2_head
+    {
+        $ev2_stem;
+        surfaces       (EV_2_Angle "EV_2_Bottom.*" EV_2_Seat);
+
+        geometryMotion
+        {
+            remeshControl
+            {
+                absTolerance    0.0015;
+                relTolerance    0.35;
+                forcedRemeshPositions
+                (
+                    $geometryMotion/minLift
+                    #calc "${geometryMotion/minLift}+1e-5"
+                );
+                clearance 0.005;   // normalisateur du critère relatif (≈ levée max/2) ; minLift (0.0005) était trop petit : seuil sub-mm près de la fermeture -> rafale d'instants (cf. README §21.14)
+            }
+        }
+
+        meshControl
+        {
+            surfaceRefinement 3;
+            surfaceControl
+            {
+                EV_2_Seat
+                {
+                    dynamicRefinement   false;   // DEBUG
+                    numberOfCells       3;
+                }
+            }
+        }
+
+        supportSurfaces
+        {
+            ev2SupportSurface
+            {
+                type        triSurface;
+                file        "supportSurfaces/EV_2_Cut.stl";
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

@@ -1,0 +1,56 @@
+#!/bin/sh
+cd ${0%/*} || exit 1 # Run from this directory
+
+# Set number of threads to 4
+OMP_NUM_THREADS=4
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+NSLOTS="${NSLOTS:-64}"
+foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
+
+# Geometry: STL directly in constant/geometry/ (no more tcc3 geometry.tar.gz)
+
+# ----------------------------------------------------------------------------
+# DEBUG MODE (single mesh at instant 0, to debug geometry/meshing):
+#     DEBUG_MESH=1 ./Allmesh
+# - skips predictRemeshInstants (the full remesh schedule)
+# - writes "0" into constant/meshTimes -> moveSurfaces, engineMeshConfig and
+#   the meshing loop below only process instant 0
+# - the generated mesh lands in constant/meshes/0/polyMesh
+#   -> checkMesh constant/meshes/0/polyMesh
+# Exit debug mode: ./Allclean, then plain ./Allmesh
+# ----------------------------------------------------------------------------
+if [ "${DEBUG_MESH:-0}" = "1" ]; then
+    echo "=== DEBUG_MESH: single mesh at instant 0 ==="
+    echo "0" > constant/meshTimes
+
+    runApplication -o moveSurfaces
+    runApplication -o engineMeshConfig
+else
+    # Predict remeshing instants (writes constant/meshTimes)
+    runApplication -o predictRemeshInstants
+
+    # Setup STL surfaces in the predict remesh instants directory
+    runApplication -o moveSurfaces
+
+    # Write blockMeshDict, SnappyHexMeshDict, and meshQualityDict in the instants directory
+    runApplication -o engineMeshConfig
+fi
+
+# Generate meshes sequentially.
+# generateMesh is a script shipped in the repository (bin/generateMesh), not
+# an installed OpenFOAM utility: locate it relative to this case, fall back
+# to PATH if not found (e.g. if installed elsewhere).
+GENERATE_MESH="$(cd "$(dirname "$0")/../.." && pwd)/bin/generateMesh"
+if [ ! -x "$GENERATE_MESH" ]; then
+    GENERATE_MESH="generateMesh"
+fi
+
+echo "Using generateMesh: $GENERATE_MESH"
+
+for mesh in $(cat constant/meshTimes); do
+    "$GENERATE_MESH" -cores "$NSLOTS" -mesh "$mesh"
+done
+#------------------------------------------------------------------------------

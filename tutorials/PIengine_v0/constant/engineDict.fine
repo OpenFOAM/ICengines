@@ -181,7 +181,7 @@ patches
             }
             surfaceControl
             {
-                "PN_Crevice.*" { surfaceRefinement 7; }  // crevice très fin
+                "PN_Crevice.*" { surfaceRefinement 4; }  // DEBUG: réduit de 7
             }
         }
     }
@@ -208,7 +208,7 @@ patches
         meshControl
         {
             surfaceRefinement 3;            // paroi cylindrique assez fine (jet tangenciel)
-            distanceRefinement ((0.001 5) (0.002 4));
+            // DEBUG: distanceRefinement désactivée (était ((0.001 5) (0.002 4)))
             // raffinement par distance à la paroi : à moins de 1 mm -> niveau 5,
             // à moins de 2 mm -> niveau 4.
         }
@@ -227,8 +227,8 @@ patches
             surfaceControl
             {
                 // Raffinements différenciés par STL :
-                IP_Wall     { surfaceRefinement 3; }
-                "IP_Seat.*" { surfaceRefinement 4; }   // sièges : plus fin (fente)
+                IP_Wall     { surfaceRefinement 2; }
+                "IP_Seat.*" { surfaceRefinement 2; }   // DEBUG
             }
         }
     }
@@ -244,7 +244,7 @@ patches
 
             surfaceControl
             {
-                "EP_Seat.*"   { surfaceRefinement 4; }
+                "EP_Seat.*"   { surfaceRefinement 2; }
             }
         }
     }
@@ -366,12 +366,12 @@ patches
 
         meshControl
         {
-            surfaceRefinement 4;
+            surfaceRefinement 3;
             surfaceControl
             {
                 IV_1_Seat
                 {
-                    dynamicRefinement   true;    // raffinement recalculé à chaque
+                    dynamicRefinement   false;   // DEBUG: désactivé (était true)
                     numberOfCells       3;        // remaillage : 3 cellules À TRAVERS
                                                 // la fente soupape-siège
                 }
@@ -440,12 +440,12 @@ patches
 
         meshControl
         {
-            surfaceRefinement 4;
+            surfaceRefinement 3;
             surfaceControl
             {
                 IV_2_Seat
                 {
-                    dynamicRefinement   true;
+                    dynamicRefinement   false;   // DEBUG
                     numberOfCells       3;
                 }
             }
@@ -526,12 +526,12 @@ patches
 
         meshControl
         {
-            surfaceRefinement 4;
+            surfaceRefinement 3;
             surfaceControl
             {
                 EV_1_Seat
                 {
-                    dynamicRefinement   true;
+                    dynamicRefinement   false;   // DEBUG
                     numberOfCells       3;
                 }
             }
@@ -598,12 +598,12 @@ patches
 
         meshControl
         {
-            surfaceRefinement 4;
+            surfaceRefinement 3;
             surfaceControl
             {
                 EV_2_Seat
                 {
-                    dynamicRefinement   true;
+                    dynamicRefinement   false;   // DEBUG
                     numberOfCells       3;
                 }
             }

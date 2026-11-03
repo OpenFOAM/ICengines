@@ -431,6 +431,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | logs tcc3 debug + `engineDict.{coarse,fine}` | **Bilan du 1er maillage debug** : fuite PERSISTANTE prouvée par les logs (« Selected for keeping : 4016708/4091717 » = 98 % gardés ; patch background 3540 faces ; volume = 98,7 % du bloc) + **sur-raffinement massif** (4M cellules, niveau 7 dominant, min 6 µm — causé par PN_Crevice niv.7 + dynamicRefinement sur la fente siège 0,5 mm + shells). **Profil DEBUG appliqué** : Crevice 7→4, distanceRefinement off, dynamicRefinement off, sièges 4→2, têtes 4→3 ; bissection à venir via insidePoints (§21.13) | Diagnostic factuel par logs |
 | 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl`, `supportSurfaces/*_Cut.stl` | **ERRATUM / ANNULATIONS** : (1) la « fente des conduits » n'existait pas — les 88 arêtes de bord des murs à z=−0.003 sont toutes à r=12,5 des axes de soupape = **bord supérieur exact des sièges** (`IP_Seat` : cône r 12,5@−0.003 → 14,5@−0.005) qui réalisent la jonction mur→culasse (correction utilisateur) → jupe supprimée, murs restaurés ; (2) l'élévation des colliers Cut (+1 mm) a été ANNULÉE : leurs bords inférieurs se posent à l'origine pile sur les bords des trous de la culasse (r=14,5, z=−0.005) — l'élever créait une fuite de 1 mm | Erreurs d'analyse corrigées (cf. §21.12bis) |
 | 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl` | **FUITE PRINCIPALE CORRIGÉE** : les murs de conduits s'arrêtaient à z=−0.003, laissant une **fente ouverte de 2 mm** entre leur fond et le plan de culasse (z=−0.005) — 88 arêtes de bord par mur à z=−0.003 (ouverture 65×25 mm). Cette fente reliait les conduits admission↔échappement↔extérieur au-dessus de la plaque → tout le domaine connecté à l'extérieur → snappy ne supprimait rien. Correctif : jupes verticales de 2 mm générées par script sur chaque arête du bord inférieur (176 tris/mur), murs désormais posés sur la culasse (z=−0.005) | Symptôme « cellules extérieures non supprimées » (cf. §21.12) |
 | 2026-11-03 | STL + `engineDict.{coarse,fine}` | **Soupapes échappement décalées** : pièces EV_1/EV_2 (Steam, Angle, Seat, Bottom, Bottom_Side) translatées de **−1 mm** en z (CAO = 1 mm sous la position fermée, style tcc3 EV 9.5e-4) ; `initialPosition 0.001` dans `ev1_stem`/`ev2_stem` (à t=0, EV remonte de 1 mm → fermée). `*_Cut` translatés **+1 mm** (décoplanarisation plan culasse) — les collaires restent ancrés à la culasse, comme tcc3 | Symptôme persistant « cellules extérieures non supprimées » (cf. §21.11) |
@@ -714,3 +715,27 @@ Deux corrections d'analyse (mesures, correction utilisateur) :
 
 Leçon : chaque « fuite » doit être validée par affrontement mesuré
 (arêtes mises en regard des bords des pièces voisines) avant correction.
+
+### 21.13 Bissection de la fuite par insidePoints (méthode)
+
+Le log snappy du 1er maillage prouve : (1) fuite — 98 % du bloc gardé, patch
+`background` (frontière du bloc) = 3540 faces, 3 régions dont une énorme
+contenant tous les points ; (2) sur-raffinement — 4M cellules (niveau 7
+dominant, min 6 µm) causé par PN_Crevice niv.7 + `dynamicRefinement
+numberOfCells 3` sur la fente de 0,5 mm cône-soupape/cône-siège + shells.
+
+Méthode de localisation (runs DEBUG_MESH=1, quelques minutes chacun avec le
+profil debug) :
+
+```
+insidePoints ((0 0 -0.013));                          # run A : chambre seule
+insidePoints ((0 -0.045 0.03));                       # run B : admission seule
+insidePoints ((0 0.045 0.03));                        # run C : échappement seul
+```
+
+Verdict par run : si le maillage ne contient QUE le volume attendu (patch
+`background` ≈ 0 face dans checkMesh) → sous-système étanche ; sinon → la
+fuite est dans ce sous-système (rechercher alors où le maillage touche le
+patch background, visible en ParaView). Une fois le sous-système coupable
+identifié, inspecter ses joints (mesures d'arêtes de bord) et corriger la
+CAO. Restaurer ensuite les raffinements normaux.

@@ -431,6 +431,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | STL EV + `engineDict.{coarse,fine}` | **Bug 9023 remaillages corrigé** : le décalage EV (−1 mm + `initialPosition 0.001`, ajouté pendant la chasse à la fuite) annulait le dénominateur du critère relatif de remaillage (`relDisp = absDisp/(position + clearance)` avec `clearance = minLift = 0.0005` → dénominateur = `lift − 0.0005` → **zéro à lift = minLift**, la transition ouverte/fermée) → rafale d'instants à chaque pas (0,01°) pendant les rampes d'ouverture échappement (EVO ≈ 109°). Correctif : **décalage EV annulé** (STL +1 mm, `initialPosition 0` partout — CAO fermée comme l'admission) | Débordement du planning de remaillage (cf. §21.14) |
 | 2026-11-03 | bissection insidePoints | **RÉSOLU** : les 3 volumes maillent correctement ensemble avec le profil debug (raffinements réduits). Cause identifiée : le **sur-raffinement** (niveau 7 → cellules 0,125–6 µm) permettait aux cellules de pénétrer les interstices constructifs (fente 0,5 mm cône soupape/siège, jeu 0,4 mm bord de soupape/trou de culasse) qui, à maille normale, sont fermés par le snap → tout devenait connecté. **Profil v0 appliqué** : Crevice 5, sièges 3, distanceRefinement et dynamicRefinement désactivés (v0), insidePoints 3 points restaurés | Conclusion du débogage (cf. §21.13) |
 | 2026-11-03 | logs tcc3 debug + `engineDict.{coarse,fine}` | **Bilan du 1er maillage debug** : fuite PERSISTANTE prouvée par les logs (« Selected for keeping : 4016708/4091717 » = 98 % gardés ; patch background 3540 faces ; volume = 98,7 % du bloc) + **sur-raffinement massif** (4M cellules, niveau 7 dominant, min 6 µm — causé par PN_Crevice niv.7 + dynamicRefinement sur la fente siège 0,5 mm + shells). **Profil DEBUG appliqué** : Crevice 7→4, distanceRefinement off, dynamicRefinement off, sièges 4→2, têtes 4→3 ; bissection à venir via insidePoints (§21.13) | Diagnostic factuel par logs |
 | 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl`, `supportSurfaces/*_Cut.stl` | **ERRATUM / ANNULATIONS** : (1) la « fente des conduits » n'existait pas — les 88 arêtes de bord des murs à z=−0.003 sont toutes à r=12,5 des axes de soupape = **bord supérieur exact des sièges** (`IP_Seat` : cône r 12,5@−0.003 → 14,5@−0.005) qui réalisent la jonction mur→culasse (correction utilisateur) → jupe supprimée, murs restaurés ; (2) l'élévation des colliers Cut (+1 mm) a été ANNULÉE : leurs bords inférieurs se posent à l'origine pile sur les bords des trous de la culasse (r=14,5, z=−0.005) — l'élever créait une fuite de 1 mm | Erreurs d'analyse corrigées (cf. §21.12bis) |
@@ -757,3 +758,19 @@ dynamicRefinement OFF (à réactiver en v1 avec numberOfCells 2 max, après
 vérification), insidePoints 3 points. ATTENTION pour les instants suivants :
 au minLift (0,5 mm), la fente réelle doit rester ≥ taille de cellule locale
 pour éviter la reconnexion — même vigilance si raffinement accru.
+
+### 21.14 Piège : initialPosition > clearance annule le critère relatif
+
+`patchRemesh.C:80` : `relDisp = absDisp/max(position + clearance, small)`.
+Pour une soupape : `position = lift − initialPosition` et `clearance = minLift`.
+Si `initialPosition > minLift` (ex-EV : 0.001 > 0.0005), le dénominateur
+`lift − initialPosition + minLift` s'annule à `lift = initialPosition − minLift`
+— qui peut tomber exactement sur la transition ouverte/fermée. Résultat :
+relDisp → ∞ et un remaillage déclenché à CHAQUE pas de balayage (0,01°)
+pendant toute la traversée de la bande critique → des milliers d'instants
+(9023 observés).
+
+Règle : soit `initialPosition 0` (CAO fermée — choix PIengine_v0), soit
+s'assurer `clearance > initialPosition` dans le remeshControl. tcc3 est
+limite (0.00095 vs 0.0005) mais sa table de levée ne s'attarde pas dans la
+bande critique ; notre configuration avec tables partagées y est restée.

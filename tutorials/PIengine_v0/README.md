@@ -431,6 +431,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `engineDict.{coarse,fine}` | **VRAIE cause des ~9000 instants : `scale 0.001` MANQUANT sur les blocs EV** — exhaustLift.txt est en mm (max 8,89 mm) et tcc3 l'enveloppe de `scale 0.001` (mm→m) ; notre motion EV lisait la table en MÈTRES (levée 1000× trop grande). Preuves : racines forcedPos à 110,5° = angle où le CSV brut vaut 0,0005 (et non 0,5 mm) ; insensibilité aux correctifs initialPosition/clearance. Correctif : `scale 0.001` + `repeat` imbriqué, comme tcc3. Conséquence évitée de justesse : moveSurfaces aurait descendu les EV de 3 cm | Bug d'unités CSV (cf. §21.14ter) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **Erratum + vrai fix des 9023** : le revert EV n'a RIEN changé (résultat identique) — preuve que `patchRemesh` ne lit PAS `initialPosition` (il lit la table `motion` brute). Vraie cause : `clearance = minLift = 0,0005` dans les remeshControl des soupapes → seuil relatif = 0,35×(lift+0,5mm) ≈ 0,2–0,9 mm près de la fermeture → rafale à chaque degré des rampes (EVO 109°, etc.) ×4 soupapes ×2 événements = 9023. **Fix : `clearance 0.005`** (normalisateur ≈ levée max/2) dans les 4 blocs soupapes | Rafale du planning, 2e itération (cf. §21.14bis) |
 | 2026-11-03 | STL EV + `engineDict.{coarse,fine}` | **Bug 9023 remaillages corrigé** : le décalage EV (−1 mm + `initialPosition 0.001`, ajouté pendant la chasse à la fuite) annulait le dénominateur du critère relatif de remaillage (`relDisp = absDisp/(position + clearance)` avec `clearance = minLift = 0.0005` → dénominateur = `lift − 0.0005` → **zéro à lift = minLift**, la transition ouverte/fermée) → rafale d'instants à chaque pas (0,01°) pendant les rampes d'ouverture échappement (EVO ≈ 109°). Correctif : **décalage EV annulé** (STL +1 mm, `initialPosition 0` partout — CAO fermée comme l'admission) | Débordement du planning de remaillage (cf. §21.14) |
 | 2026-11-03 | bissection insidePoints | **RÉSOLU** : les 3 volumes maillent correctement ensemble avec le profil debug (raffinements réduits). Cause identifiée : le **sur-raffinement** (niveau 7 → cellules 0,125–6 µm) permettait aux cellules de pénétrer les interstices constructifs (fente 0,5 mm cône soupape/siège, jeu 0,4 mm bord de soupape/trou de culasse) qui, à maille normale, sont fermés par le snap → tout devenait connecté. **Profil v0 appliqué** : Crevice 5, sièges 3, distanceRefinement et dynamicRefinement désactivés (v0), insidePoints 3 points restaurés | Conclusion du débogage (cf. §21.13) |
@@ -790,3 +791,24 @@ Fix : `clearance 0.005` dans les 4 remeshControl soupapes (≈ la moitié de la
 levée max). Le critère devient : remailler quand la levée a bougé de
 max(1,5 mm ; 0,35×(lift+5 mm)) → quelques instants par rampe. Le revert EV
 est conservé (simplification : CAO fermée partout, initialPosition 0).
+
+### 21.14ter LA cause des ~9000 instants : unités du CSV échappement
+
+exhaustLift.txt est en **millimètres** (max 8,89 mm) ; tcc3 l'enveloppe :
+
+```
+motion { type scale; scale 0.001;          // mm -> m
+         value { type repeat; period 720; value { type table; ... } } }
+```
+
+Notre engineDict EV avait omis le `scale` -> la levée échappement valait jusqu'à
+8,89 MÈTRES. Signatures : racines forcedPos trouvées là où le CSV BRUT vaut
+0,0005 (≈110,5°) au lieu de 0,5 mm (≈133°) ; planning insensible aux
+correctifs initialPosition/clearance (levée aberrante dominante) ;
+moveSurfaces aurait descendu les soupapes de centimètres aux instants > 119°.
+
+Leçons : (1) toujours vérifier les UNITÉS des CSV (en-tête `#CAD;mm` vs
+`#CAD;m`) avant de référencer une table ; (2) un planning d'instants
+démesuré doit faire suspecter une échelle de mouvement erronée ; (3) comparer
+un paramétrage à son modèle (tcc3) champ par champ, y compris les
+enveloppes Function1 (scale/repeat).

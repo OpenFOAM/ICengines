@@ -489,19 +489,27 @@ patches
 
             motion
             {
-                type            repeat;
-                period          720;
+                // ATTENTION : exhaustLift.txt est en MILLIMETRES -> scale 0.001
+                // (mm -> m), indispensable (oubli = levée 1000x trop grande :
+                // forcedPos déplacés, rafale d'instants, moveSurfaces faux)
+                type            scale;
+                scale           0.001;
                 value
                 {
-                    type            table;
-                    format          csv;
-                    file            "$FOAM_CASE/constant/engineData/exhaustLift.txt";
-                    nHeaderLine     2;
-                    columns         ( 0 1 );
-                    separator       ";";
-                    mergeSeparators yes;
-                    outOfBounds     repeat;
-                    interpolationScheme linear;
+                    type            repeat;
+                    period          720;
+                    value
+                    {
+                        type            table;
+                        format          csv;
+                        file            "$FOAM_CASE/constant/engineData/exhaustLift.txt";
+                        nHeaderLine     2;
+                        columns         ( 0 1 );
+                        separator       ";";
+                        mergeSeparators yes;
+                        outOfBounds     repeat;
+                        interpolationScheme linear;
+                    }
                 }
             }
         }

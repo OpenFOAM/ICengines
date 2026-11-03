@@ -26,6 +26,9 @@
 17. [Bilan des fichiers STL pour PIengine_v0](#17-bilan-des-fichiers-stl-pour-piengine_v0)
 18. [Modifications effectuées (journal)](#18-modifications-effectuées-journal)
 19. [TODO avant premier maillage](#19-todo-avant-premier-maillage)
+20. [Glossaire des paramètres des dictionnaires](#20-glossaire-des-paramètres-des-dictionnaires-réponses-aux-questions)
+21. [Notes de validation, errata et pièges documentés](#21-notes-de-validation-et-remarques-importantes)
+22. [Récit complet du débogage (trace des recherches)](#22-récit-complet-du-débogage-trace-des-recherches)
 
 ---
 
@@ -431,6 +434,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `README.md` | **§22 « Récit complet du débogage »** : trace chronologique de toute l'enquête (phases 0-5, hypothèses réfutées, errata, méthode de bissection, 6 leçons méthodologiques, état final + dette technique v0). Sommaire complété (20-22) | Traçabilité des recherches (demande utilisateur) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **VRAIE cause des ~9000 instants : `scale 0.001` MANQUANT sur les blocs EV** — exhaustLift.txt est en mm (max 8,89 mm) et tcc3 l'enveloppe de `scale 0.001` (mm→m) ; notre motion EV lisait la table en MÈTRES (levée 1000× trop grande). Preuves : racines forcedPos à 110,5° = angle où le CSV brut vaut 0,0005 (et non 0,5 mm) ; insensibilité aux correctifs initialPosition/clearance. Correctif : `scale 0.001` + `repeat` imbriqué, comme tcc3. Conséquence évitée de justesse : moveSurfaces aurait descendu les EV de 3 cm | Bug d'unités CSV (cf. §21.14ter) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **Erratum + vrai fix des 9023** : le revert EV n'a RIEN changé (résultat identique) — preuve que `patchRemesh` ne lit PAS `initialPosition` (il lit la table `motion` brute). Vraie cause : `clearance = minLift = 0,0005` dans les remeshControl des soupapes → seuil relatif = 0,35×(lift+0,5mm) ≈ 0,2–0,9 mm près de la fermeture → rafale à chaque degré des rampes (EVO 109°, etc.) ×4 soupapes ×2 événements = 9023. **Fix : `clearance 0.005`** (normalisateur ≈ levée max/2) dans les 4 blocs soupapes | Rafale du planning, 2e itération (cf. §21.14bis) |
 | 2026-11-03 | STL EV + `engineDict.{coarse,fine}` | **Bug 9023 remaillages corrigé** : le décalage EV (−1 mm + `initialPosition 0.001`, ajouté pendant la chasse à la fuite) annulait le dénominateur du critère relatif de remaillage (`relDisp = absDisp/(position + clearance)` avec `clearance = minLift = 0.0005` → dénominateur = `lift − 0.0005` → **zéro à lift = minLift**, la transition ouverte/fermée) → rafale d'instants à chaque pas (0,01°) pendant les rampes d'ouverture échappement (EVO ≈ 109°). Correctif : **décalage EV annulé** (STL +1 mm, `initialPosition 0` partout — CAO fermée comme l'admission) | Débordement du planning de remaillage (cf. §21.14) |
@@ -812,3 +816,147 @@ Leçons : (1) toujours vérifier les UNITÉS des CSV (en-tête `#CAD;mm` vs
 démesuré doit faire suspecter une échelle de mouvement erronée ; (3) comparer
 un paramétrage à son modèle (tcc3) champ par champ, y compris les
 enveloppes Function1 (scale/repeat).
+
+## 22. Récit complet du débogage (trace des recherches)
+
+> Cette section retrace chronologiquement l'ensemble de l'enquête menée pour
+> rendre PIengine_v0 maillable : chaque hypothèse, chaque test, chaque erreur
+> (y compris les nôtres), et la leçon qui en découle. Les détails techniques
+> sont dans les sections §21.x ; ici, c'est la logique de recherche qui est
+> conservée — précieuse pour un futur débogage, ou pour quiconque adaptera
+> une nouvelle géométrie au framework AATE.
+
+### 22.1 Phase 0 — Apprentissage du framework (avant géométrie)
+
+Étude du code source d'AATE (`engineMeshConfig`, `moveSurfaces`,
+`predictRemeshInstants`, `patchRemesh`, `findSurfaceFiles`) pour comprendre :
+la découverte automatique des STL (`constant/geometry/`), le dictionnaire
+central `engineDict` (`surfaces`, `geometryMotion`, `meshControl`), les
+groupes de CL, le pipeline de maillage, la stratégie multi-maillages
+(meshToMesh). Comparaison permanente avec les deux tutoriels (tcc3, complet ;
+imperialcollege, minimal). **Leçon : le `snappyHexMeshDict` n'existe pas dans
+le cas — il est généré ; tout passe par `engineDict`.**
+
+### 22.2 Phase 1 — Conception et intégration de la géométrie 4 soupapes
+
+- Décisions CAO : 5 STL/soupape (comme tcc3), sièges à 1 tranche, conduits à
+  4 fichiers (mur commun + bride + 2 sièges), bougie en paroi plate,
+  soupapes CAO fermées, ValveCut par soupape ;
+- vérification des STL déposés (parseur Python : bounding boxes, watertightness
+  par arêtes, affrontements mesurés) ;
+- rédaction des dictionnaires commentés (engineDict, dynamicMeshDict,
+  zonesGenerator) + décisions utilisateur (course/bielle tcc3 conservées,
+  PMH, pressions constantes, rpm 2500, état initial estimé).
+
+### 22.3 Phase 2 — Premiers échecs de la chaîne Allmesh (3 bugs d'intégration)
+
+1. **`generateMesh: not found`** → script du dépôt (`bin/`), pas un
+   utilitaire OpenFOAM ; fix : Allmesh le localise relativement (§21.8) ;
+2. **références d'héritage `$../...`** mal comptées → FATAL IO ERROR ligne
+   216 ; fix : `../../../` depuis un bloc `motion` (§21.6) ;
+3. **STL perdus du dépôt** : le `.gitignore` global exclut `*.stl` ; un
+   `git add` d'un déplacement a silencieusement supprimé les fichiers ;
+   fix : `git add -f` + exceptions `.gitignore` (§21.7). Leçon : après toute
+   manipulation STL, `git ls-files ... | wc -l` (attendu 36).
+
+### 22.4 Phase 3 — La grande chasse à la fuite (« cellules extérieures non supprimées »)
+
+Symptôme : le maillage de l'instant 0 garde ~98 % du bloc de fond
+(4 M cellules, patch `background` rempli, tout connecté à l'extérieur).
+
+**Hypothèses géométriques testées (par mesures sur STL, parseur Python) :**
+1. ~~trou central de bougie dans HD_Wall~~ → **erratum** : le raster avait été
+   mal interprété ; preuve par calcul d'aire (disque − 4 puits, exact) ;
+   le « r=13,8 mm » était le bord interne des puits de soupapes (§21.9) ;
+2. tiges dépassant des conduits → **comportement normal** (design tcc3 :
+   volume au-dessus des colliers = extérieur, supprimé) — vérifié en
+   mesurant tcc3 lui-même, qui n'a pas de plafond au-dessus de ses soupapes ;
+3. ~~fente de 2 mm sous les murs de conduits~~ → **erratum** : les 88 arêtes
+   de bord des murs s'affrontent exactement aux sièges (r=12,5), qui sont
+   les pièces de jonction mur→culasse (correction utilisateur, §21.12bis) ;
+   la jupe ajoutée à tort a été supprimée ;
+4. colliers ValveCut coplanaires avec la culasse → d'abord surélevés +1 mm
+   (analogie tcc3), puis **repliés** : notre culasse est une plaque sans
+   épaisseur, les colliers se posent sur les bords des trous (§21.12bis) ;
+5. soupapes échappement décalées façon tcc3 (−1 mm + initialPosition
+   0.001) → appliqué puis **annulé** (voir phase 5 : la cause était ailleurs).
+
+**Méthode décisive — bissection par insidePoints (§21.13)** : runs
+`DEBUG_MESH=1` avec un seul point (chambre / admission / échappement).
+Résultat : les 3 volumes maillent **proprement**, y compris ensemble !
+
+### 22.5 Phase 4 — La vraie cause du « échec maillage » : le sur-raffinement
+
+Le profil tcc3 (PN_Crevice niveau 7 + dynamicRefinement numberOfCells 3 sur
+les sièges + distanceRefinement) produisait des cellules de 0,125 mm à 6 µm,
+**capables de pénétrer les interstices constructifs** de la CAO (fente
+0,5 mm entre cônes soupape/siège ; jeu 0,4 mm bord de soupape/trou de
+culasse). À maille ≥1 mm, le snap ferme ces interstices ; plus fins, ils
+deviennent de vrais passages reliant chambre ↔ conduits ↔ extérieur → tout
+le bloc gardé. Profil v0 : Crevice 5, sièges 3, distanceRefinement et
+dynamicRefinement OFF (§21.13bis). **Leçon : le raffinement doit rester
+plus grossier que les jeux de la CAO, sinon snappy « voit » à travers.**
+
+### 22.6 Phase 5 — Le planning de remaillage à ~9000 instants (3 itérations)
+
+Après le fix maillage, `predictRemeshInstants` produisait **9023** instants
+(attendu ~40-80) — rafale dense sur les rampes de soupapes (EVO ≈ 109-119°,
+espacement ~0,28°).
+
+1. **Théorie initialPosition** : le décalage EV (0.001) semblait annuler le
+   dénominateur du critère relatif (`lift − initialPosition + clearance`) ;
+   fix : revert EV (initialPosition 0). **Résultat : strictement aucun
+   changement** (9023 identiques) → théorie réfutée, mais revert conservé
+   (simplification) ;
+2. **Théorie clearance** : `clearance = minLift = 0.0005` donnait un seuil
+   relatif sub-mm près de la fermeture ; fix : clearance 0.005. **Résultat :
+   9016** — à peine mieux → le critère de déplacement n'était pas le
+   coupable dominant ;
+3. **La vraie cause — unités du CSV** : `exhaustLift.txt` est en
+   **millimètres** (max 8,89 mm) et tcc3 l'enveloppe d'un `scale 0.001`
+   (mm→m). Notre bloc `motion` EV avait **omis le scale** → levée lue en
+   MÈTRES (1000× trop grande). Preuves convergentes : les racines
+   `forcedPos` tombaient à 110,5° = angle où le **CSV brut** vaut 0,0005
+   (au lieu de 0,5 mm ≈ 133°) ; insensibilité aux correctifs 1 et 2 ;
+   et `moveSurfaces` aurait descendu les soupapes de centimètres aux
+   instants > 119°. Fix : enveloppe `scale 0.001` + `repeat` imbriqué
+   (§21.14ter). **Planning retombé à ~40-80 instants.**
+
+**Leçons de la phase 5** : (1) vérifier les unités de chaque CSV avant de
+le référencer ; (2) un planning démesuré doit faire suspecter une échelle
+de mouvement erronée AVANT les tolérances ; (3) un test « négatif »
+(correction sans effet) est une information précieuse : il élimine une
+hypothèse et oriente la suivante.
+
+### 22.7 Synthèse des leçons méthodologiques
+
+1. **Mesurer avant de corriger** : chaque hypothèse de fuite a été validée
+   (ou réfutée) par mesure d'affrontement (arêtes de bord, rayons, aires) —
+   deux errata auraient été évités par le calcul d'aire dès le départ ;
+2. **Bissecter** : le mode DEBUG_MESH + insidePoints un à un a isolé les
+   sous-systèmes en 3 runs de quelques minutes ;
+3. **Comparer au modèle champ par champ** : le bug du `scale` aurait sauté
+   aux yeux en différenciant nos blocs EV avec ceux de tcc3 (l'enveloppe
+   Function1 manque) ;
+4. **Chercher les signatures numériques** : les racines forcedPos à 110,5°
+   étaient la signature du facteur 1000 (0,0005 brut au lieu de 0,0005 m) ;
+5. **Un paramètre absurde en amont écrase tout en aval** : une levée 1000×
+   trop grande rend les tolérances de remaillage inopérantes — corriger
+   les tolérances avant l'échelle est une perte de temps ;
+6. **Documenter même les erreurs** : chaque erratum (§21.9, §21.12bis,
+   §21.14bis) est conservé — c'est ce qui a permis de ne pas refaire les
+   mêmes déductions.
+
+### 22.8 État final (v0) et dette technique connue
+
+| Élément | État |
+|---|---|
+| Géométrie (36 STL) | ✅ validée, étanche, affrontements mesurés |
+| engineDict (4 soupapes) | ✅ profil v0 (raffinements modérés), `scale 0.001` sur EV |
+| Planning remaillage | ✅ ~40-80 instants |
+| Maillage instant 0 | ✅ 3 volumes propres (bissection validée) |
+| Maillages complets | ⏳ en cours de génération au moment de l'écriture |
+| dynamicRefinement / distanceRefinement | désactivés en v0 — à réévaluer en v1 (avec numberOfCells ≤ 2 et vérification des instants minLift) |
+| Instants critiques (ouvertures/fermetures) | à contrôler par checkMesh après génération |
+| Combustion | hors périmètre v0 (motored, tracer passif) |
+| Données expérimentales tcc3 (chamberPressure) | inutilisables (moteur différent) — à remplacer/supprimer des scripts de comparaison |

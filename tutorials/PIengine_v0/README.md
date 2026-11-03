@@ -431,6 +431,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl`, `supportSurfaces/*_Cut.stl` | **ERRATUM / ANNULATIONS** : (1) la « fente des conduits » n'existait pas — les 88 arêtes de bord des murs à z=−0.003 sont toutes à r=12,5 des axes de soupape = **bord supérieur exact des sièges** (`IP_Seat` : cône r 12,5@−0.003 → 14,5@−0.005) qui réalisent la jonction mur→culasse (correction utilisateur) → jupe supprimée, murs restaurés ; (2) l'élévation des colliers Cut (+1 mm) a été ANNULÉE : leurs bords inférieurs se posent à l'origine pile sur les bords des trous de la culasse (r=14,5, z=−0.005) — l'élever créait une fuite de 1 mm | Erreurs d'analyse corrigées (cf. §21.12bis) |
 | 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl` | **FUITE PRINCIPALE CORRIGÉE** : les murs de conduits s'arrêtaient à z=−0.003, laissant une **fente ouverte de 2 mm** entre leur fond et le plan de culasse (z=−0.005) — 88 arêtes de bord par mur à z=−0.003 (ouverture 65×25 mm). Cette fente reliait les conduits admission↔échappement↔extérieur au-dessus de la plaque → tout le domaine connecté à l'extérieur → snappy ne supprimait rien. Correctif : jupes verticales de 2 mm générées par script sur chaque arête du bord inférieur (176 tris/mur), murs désormais posés sur la culasse (z=−0.005) | Symptôme « cellules extérieures non supprimées » (cf. §21.12) |
 | 2026-11-03 | STL + `engineDict.{coarse,fine}` | **Soupapes échappement décalées** : pièces EV_1/EV_2 (Steam, Angle, Seat, Bottom, Bottom_Side) translatées de **−1 mm** en z (CAO = 1 mm sous la position fermée, style tcc3 EV 9.5e-4) ; `initialPosition 0.001` dans `ev1_stem`/`ev2_stem` (à t=0, EV remonte de 1 mm → fermée). `*_Cut` translatés **+1 mm** (décoplanarisation plan culasse) — les collaires restent ancrés à la culasse, comme tcc3 | Symptôme persistant « cellules extérieures non supprimées » (cf. §21.11) |
 | 2026-11-03 | `Allmesh` | **Mode débogage** : `DEBUG_MESH=1 ./Allmesh` = un seul maillage à l'instant 0 (saute predictRemeshInstants, écrit 0 dans meshTimes) | Débogage géométrie/maillage (cf. §21.10) |
@@ -693,3 +694,23 @@ murs est désormais posé sur la plaque (z = −0,005), comme le haut de la
 chemise. Règle générale : **toute pièce doit finir SUR une autre pièce**,
 jamais en laissant un intervalle. (Les brides d'entrée/sortie et les trous
 de tiges du plafond des conduits sont, eux, conformes au design tcc3.)
+
+### 21.12bis Erratum : sièges = pièces de jonction ; colliers posés sur la culasse
+
+Deux corrections d'analyse (mesures, correction utilisateur) :
+
+1. **Les murs de conduits n'ont jamais eu de fente ouverte** : leurs 88 arêtes
+   de bord à z=−0.003 sont toutes à r=12,5 mm des axes de soupape — elles
+   s'affrontent **exactement** au bord supérieur des anneaux de siège
+   (`IP/EP_Seat_*` : cône de r 12,5 à z=−0.003 vers r 14,5 à z=−0.005).
+   Les sièges sont les **pièces de jonction** mur → plan de culasse. La jupe
+   ajoutée à tord (§21.12) a été supprimée, murs restaurés à l'identique.
+2. **Les colliers ValveCut étaient correctement posés à l'origine** : leur
+   bord inférieur (r=14,5, z=−0.005) coïncide avec les bords des trous de
+   culasse. L'élévation de +1 mm (analogie tcc3) a été **annulée** : elle
+   ouvrait une fuite de 1 mm. Notre culasse étant de épaisseur nulle
+   (plaque à z=−0.005), le design tcc3 (colliers surélevés au-dessus d'une
+   culasse épaisse) ne transposait pas.
+
+Leçon : chaque « fuite » doit être validée par affrontement mesuré
+(arêtes mises en regard des bords des pièces voisines) avant correction.

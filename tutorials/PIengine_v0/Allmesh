@@ -10,7 +10,7 @@ OMP_NUM_THREADS=4
 NSLOTS="${NSLOTS:-64}"
 foamDictionary system/decomposeParDict -entry numberOfSubdomains -set $NSLOTS
 
-tar -xzf constant/geometry.tar.gz -C constant
+# Geometry: STL directly in constant/geometry/ (no more tcc3 geometry.tar.gz)
 
 # Predict remeshing instants
 runApplication -o predictRemeshInstants

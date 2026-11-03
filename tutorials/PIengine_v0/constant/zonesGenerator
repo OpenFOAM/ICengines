@@ -1,10 +1,6 @@
 /*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Version:  dev
-     \\/     M anipulation  |
-\*---------------------------------------------------------------------------*/
+  \\      /  F ield         | OpenFOAM: The last Op    \*---------------------------------------------------------------------------*/
 FoamFile
 {
     format      ascii;
@@ -12,73 +8,91 @@ FoamFile
     location    "constant";
     object      zonesGenerator;
 }
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * /
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// ============================================================================
+// PIengine_v0 — zonesGenerator
+// ----------------------------------------------------------------------------
+// Lu par l'utilitaire "createZones" (lancé par Allrun) : crée des cellZones et
+// pointZones sur le maillage initial. 3 consommateurs :
+//   1. INITIALISATION ZONALE des champs : 0.orig/{p,T,tracer} utilisent
+//      "internalField { type zonal; zones { ... } }" -> chaque zone reçoit sa
+//      valeur initiale (ex. gaz chauds chambre / gaz frais conduits) ;
+//   2. MOVER : dynamicMeshDict utilise "frozenZones (cylinderHead)" et
+//      "movingZones (pistonBowl)" (pointZones ci-dessous) ;
+//   3. POST-TRAITEMENT : moyennes par zone (pression de chambre, etc.).
+//
+// Différences avec tcc3 : PAS de zone sparkPlug (bougie non modélisée en v0).
+// ============================================================================
 
-sparkPlug
-{
-    type            cylinder;
-    point1          (0 0 0);
-    point2          (0 0 0.1);
-    radius          0.01;
-    zoneType        cell;
-}
-
+// ------------------------- CHAMBRE (cellZone) -------------------------------
+// Zone couvrant le volume de chambre de combustion. On RÉUTILISE la définition
+// du cylindre de raffinement d'engineDict ($engineDict!...) : une seule
+// définition géométrique pour raffinement + zone (cohérence garantie).
 chamber
 {
-    type        union;
-    chamber
-    {
-        $engineDict!meshControl/regionRefinement/chamber;
-        zoneType    cell;
-    }
-    sparkPlug;
+    $engineDict!meshControl/regionRefinement/chamber;
+    zoneType    cell;                 // -> cellZone (sélection de cellules)
 }
 
+// ------------------------- CONDUIT D'ÉCHAPPEMENT (cellZone) -----------------
+// Boîte englobant le conduit d'échappement (mesuré sur EP_Wall/EP_Outlet :
+// x dans [-0.033, 0.033], y dans [0.007, 0.055], z dans [-0.003, 0.043]).
+// Une boîte approximative suffit : seules les cellules DANS le fluide sont
+// sélectionnées, le hors-fluide n'est pas maillé.
 exhaustPort
 {
-    type            box;
-    box             (-0.0431018  -0.0150694  0.001)  (-0.0128983  0.103  0.07908);
+    type            box;              // forme analytique : parallélépipède
+    box             (-0.045 0.0 -0.01) (0.045 0.06 0.05);
     zoneType        cell;
 }
 
-
+// ------------------------- CONDUIT D'ADMISSION (cellZone) -------------------
+// Construit par DIFFÉRENCE : "tout le domaine" MOINS les zones déjà définies
+// (échappement, chambre). Pas besoin d'épouser la forme du port torsadé :
+// ce qui reste après soustraction = le volume du conduit d'admission.
+// NOTE : une zone peut référencer les zones déclarées AVANT elle (ordre !).
 intakePort
 {
     type            difference;
     all
     {
         type            box;
-        box             (-10 -10 -10)  (10 10 10);
+        box             (-10 -10 -10)  (10 10 10);   // boîte englobante totale
         zoneType        cell;
     }
-    exhaustPort;
-    chamber;
-    sparkPlug;
+    exhaustPort;   // <- soustrait la zone exhaustPort
+    chamber;       // <- soustrait la zone chamber
 }
 
+// ------------------------- POINTZONES POUR LE MOVER -------------------------
+// (utilisées par dynamicMeshDict : frozenZones / movingZones)
 
-
-// cylinderHead and pistonBowl pointZones for mesh mover control
-// define pistonBowl so that the pistonBowl is NOT frozen
-// near TDC to control deformation better
+// cylinderHead : points du maillage proches de la CULASSE. Ils restent
+// IMMOBILES pendant la déformation (ancrage du haut du maillage pendant que
+// le piston descend). "moveUpdate true" : la zone est recalculée après chaque
+// remaillage (les points changent d'un polyMesh à l'autre).
 cylinderHead
 {
-    type        cylinderHeadPoints;
+    type        cylinderHeadPoints;   // type fourni par OpenFOAM-14
     moveUpdate  true;
 }
 
+// pistonBowl : points proches du PISTON. Ils SUIVENT le piston (movingZones).
+// Enveloppe "periodic" : la zone n'est ACTIVE que dans la fenêtre CAD
+// [begin, end] (autour du PMH, quand la clarance est minimale et qu'il faut
+// répartir finement la déformation), puis désactivée ("deactivate").
+// TODO-USER : fenêtre à ajuster selon la clarance au PMH réelle (tcc3 : ±40°).
 pistonBowl
 {
-    type        periodic;
-    begin       -40;
-    end         40;
-    deactivate  true;
-    repeat      720;
+    type        periodic;             // activation/désactivation périodique
+    begin       -40;                 // CAD de début de fenêtre (relatif)
+    end         40;                  // CAD de fin de fenêtre
+    deactivate  true;                // zone désactivée hors fenêtre
+    repeat      720;                 // fenêtre répétée chaque cycle
     pistonBowl
     {
-        type        pistonBowlPoints;
+        type        pistonBowlPoints;   // points proches du piston
     }
 }
 
 // ************************************************************************* //
-

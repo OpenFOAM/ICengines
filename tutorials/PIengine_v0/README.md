@@ -385,6 +385,29 @@ pressions), `zonesGenerator` (sans bougie, boîtes ports élargies), `Allmesh`
 
 ## 18. Modifications effectuées (journal)
 
+### 18.1 Correspondance fichiers réels ↔ rôles (noms déposés par l'utilisateur)
+
+Les 36 STL déposés utilisent la nomenclature `IV_1_*` (avec underscore) et
+`Steam` (au lieu de `Stem` — coquille conservée telle quelle dans les
+fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
+
+| Fichier réel | Rôle | Patch engineDict |
+|---|---|---|
+| `geometry/PN_Topland.stl`, `PN_Crevice.stl` | Piston (couronne, crevice) | `piston` (movingWall) |
+| `geometry/LN_Wall.stl` | Chemise | `liner` (scaling) |
+| `geometry/HD_Wall.stl` | Culasse plate (bougie non modélisée v0) | `cylinderhead` (staticWall) |
+| `geometry/IV_1_Steam.stl` … `IV_2_Steam.stl` | Tiges de soupapes admission | `iv1_stem`, `iv2_stem` |
+| `geometry/IV_?_{Angle,Bottom,Bottom_Side,Seat}.stl` | Têtes de soupapes admission | `iv1_head`, `iv2_head` (movingWall) |
+| `geometry/EV_?_{Steam,Angle,Bottom,Bottom_Side,Seat}.stl` | Soupapes échappement | `ev1_stem/ev1_head`, `ev2_stem/ev2_head` |
+| `geometry/IP_Wall.stl`, `IP_Seat_1.stl`, `IP_Seat_2.stl` | Conduit admission (mur commun + 2 sièges) | `intakePort` (staticWall) |
+| `geometry/IP_Inlet.stl` | Bride admission | `inlet` (groupe inlet) |
+| `geometry/EP_Wall.stl`, `EP_Seat_1.stl`, `EP_Seat_2.stl` | Conduit échappement | `exhaustPort` (staticWall) |
+| `geometry/EP_Outlet.stl` | Bride échappement | `outlet` (groupe outlet) |
+| `geometry/supportSurfaces/IV_?_Cut.stl`, `EV_?_Cut.stl` | Bouchons volumes morts | `supportSurfaces` des blocs `*_head` |
+
+### 18.2 Journal des modifications
+
+
 > Toute modification du cas doit être consignée ici : fichier modifié, nature
 > du changement, motif, date.
 
@@ -393,6 +416,13 @@ pressions), `zonesGenerator` (sans bougie, boîtes ports élargies), `Allmesh`
 | 2026-10-22 | — | Copie intégrale de `tutorials/tcc3` → `tutorials/PIengine_v0` | Point de départ du nouveau cas |
 | 2026-10-22 | `README.md` | Création : documentation d'étude (ce fichier) | Traçabilité des choix et des questions |
 | 2026-10-22 | `README.md` (§1, §17) | Découpage CAO finalisé : soupapes à 5 fichiers, conduits à 4 fichiers (`Inlet/Outlet` + `Wall` commun + `Seat_1`/`Seat_2` à 1 tranche) — 36 STL au total | Choix utilisateur |
+| 2026-10-22 | `constant/geometry/`, `constant/geometry/supportSurfaces/` | Création des dossiers ; déplacement des 36 STL ; `*Cut*` → `supportSurfaces` ; suppression de `geometry.tar.gz` (géométrie tcc3 obsolète) | Rangement de la géométrie déposée à plat dans `constant/` |
+| 2026-10-22 | `Allmesh` | Suppression de la ligne `tar -xzf` (STL livrés en clair) | Adaptation au dépôt direct des STL |
+| 2026-10-22 | `constant/engineDict.coarse` | Réécriture complète, adaptée aux 4 soupapes et à la géométrie réelle (alésage R=0.05, culasse plate z=-0.005, soupapes CAO fermées) ; commentaires détaillés de chaque paramètre ; valeurs `TODO-USER` pour la cinématique | Configuration du nouveau moteur |
+| 2026-10-22 | `constant/engineDict.fine` | Généré depuis `.coarse` : `cellSize 0.008`, couches limites activées (`addLayers true`, `nSurfaceLayers 1`) | Variante maillage fin |
+| 2026-10-22 | `constant/dynamicMeshDict` | Bloc `valves` : 4 entrées (`intakeValve1/2`, `exhaustValve1/2`) ; `slidingPatches` regex `.*Steam.*` ; commentaires | Mover des 4 soupapes (références croisées engineDict) |
+| 2026-10-22 | `constant/zonesGenerator` | Sans `sparkPlug` ; `chamber` héritée d'engineDict ; boîte échappement adaptée aux mesures STL ; commentaires | Cohérence avec la nouvelle culasse |
+| 2026-10-22 | `README.md` | §18.1 table de correspondance noms réels ; §20 glossaire des paramètres | Documentation des dicts commentés |
 | (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, sièges à 1 tranche, `sparkplug` supprimé, conduits à 4 fichiers) | Adaptation à la nouvelle géométrie |
 | (à venir) | `constant/dynamicMeshDict` | Bloc `valves` : `intakeValve2`, `exhaustValve2` | Mover des 2 nouvelles soupapes |
 | (à venir) | `constant/engineData/` | CSV de levée ×4 + pressions | Lois propres à PIengine_v0 |
@@ -411,3 +441,59 @@ pressions), `zonesGenerator` (sans bougie, boîtes ports élargies), `Allmesh`
 - [ ] `checkMesh` sur `constant/meshes/0/polyMesh` **avant** la boucle complète
 - [ ] Ajuster `cellSize`/raffinements si nécessaire, répéter
 - [ ] `./Allrun`
+
+## 20. Glossaire des paramètres des dictionnaires (réponses aux questions)
+
+Chaque paramètre ci-dessous est commenté en place dans les dictionnaires.
+Ce glossaire sert de référence rapide.
+
+### engineDict (patches/*/geometryMotion)
+
+| Paramètre | Sens | Où le trouver / comment le fournir |
+|---|---|---|
+| `axis (0 0 1)` | Axe du mouvement (moteur ou soupape) | Vertical ici ; l'adapter si soupapes inclinées |
+| `initialPosition` | Position de référence de la CAO (levée pour une soupape, hauteur pour le piston). `déplacement(t) = valeur(t) − initialPosition` ; défaut = 0 | CAO PIengine_v0 : soupapes FERMÉES et piston à sa position CAO → 0 partout (vérifier la position piston, voir question Q1) |
+| `minLift` | Levée minimale de soupape : la soupape n'est jamais totalement au contact dans le maillage ; déclenche les remaillages d'ouverture/fermeture (`forcedRemeshPositions`) | Choix maillage (tcc3 : 0,5 mm) ; doit être ≥ clarance CAO fermée |
+| `motion { type crankConnectingRodMotion; conRodLength; stroke; }` | Cinématique piston : longueur de bielle et course en m | **Données moteur à fournir (TODO-USER)** |
+| `motion { type repeat; period 720; value { type table; file ...; } }` | Loi de levée : table CSV CAD → lift, répétée chaque cycle | CSV dans `constant/engineData/` (TODO-USER : lois propres à PIengine) |
+| `remeshControl { absTolerance; relTolerance; forcedRemeshPositions; clearance; }` | Quand remailler : tolérances sur le déplacement depuis le dernier maillage ; instants forcés aux fermetures ; clarance morte au PMH | Tolérances transposables de tcc3 ; `clearance` = donnée moteur (TODO-USER) |
+
+### engineDict (meshControl)
+
+| Paramètre | Sens | Où le trouver |
+|---|---|---|
+| `cellSize` | Taille de base du maillage (avant raffinements, chaque niveau divisant par 2) | ~alésage/6 en grossier |
+| `insidePoints ((x y z) ...)` | UN POINT PAR VOLUME FLUIDE ; doit rester dans le fluide à tous les instants | Centre chambre + centre de chaque conduit (vérifier après course connue) |
+| `surfaceRefinement N` | Niveau de raffinement d'une surface (2^N division) | Sièges/fentes > parois > conduits |
+| `distanceRefinement ((d1 l1) (d2 l2))` | Raffinement par distance à la surface (bandes concentriques) | Pour la chemise et la fente de levée |
+| `dynamicRefinement true; numberOfCells 3;` | À chaque remaillage, taille recalculée pour poser N cellules à travers la fente soupape-siège | Sur les `*_Seat` des soupapes |
+| `regionRefinement { type cylinder; point1; point2; radius; level; }` | Raffinement volumique analytique (cylindre, cône tronqué...) ; fenêtres `begin/end/repeat` pour activation par CAD | Zone chambre héritée par zonesGenerator |
+| `layerControl` | Couches limites (prismes) : nombre, épaisseurs, expansion | Off en v0 coarse, on en fine |
+
+### engineDict (patches/*/meshControl/patchInfo)
+
+| Paramètre | Sens |
+|---|---|
+| `inGroups staticWall;` | Paroi fixe (noSlip) — défaut global si non listé |
+| `inGroups movingWall;` | Paroi mobile (movingWallVelocity : vitesse locale auto) |
+| `patchType patch; inGroups inlet/outlet;` | Vraie frontière : conditions inlet/outlet des 0.orig |
+
+### dynamicMeshDict
+
+| Paramètre | Sens |
+|---|---|
+| `slidingPatches` | Patches où le maillage glisse (chemise, tiges) — regex sur les noms DE FICHIERS (`.*Steam.*` ici) |
+| `frozenZones` / `movingZones` | PointZones ancrées (cylasse) / suivant le piston (pistonBowl), définies dans zonesGenerator |
+| `${engineDict!...}` | Référence croisée : valeur lue dans engineDict (source unique) |
+| `topoChanger { times; repeat; timeDelta; }` | Instants de remaillage (meshTimes), périodicité du cycle, tolérance d'appariement |
+
+### zonesGenerator
+
+| Paramètre | Sens |
+|---|---|
+| `zoneType cell;` | Sélectionne des cellules (cellZone) — pour initialisation zonale et post-traitement |
+| `type cylinder/box; point1/point2/radius/box` | Formes analytiques ; coordonnées mesurées sur les STL PIengine_v0 |
+| `type union/difference` | Combinaisons booléennes de zones (ordre de déclaration important) |
+| `$engineDict!...` | Héritage d'une définition d'engineDict (raffinement ↔ zone cohérents) |
+| `cylinderHeadPoints` / `pistonBowlPoints` | PointZones du mover (frozen/moving) recalculées après remaillage (`moveUpdate`) |
+| `periodic { begin; end; deactivate; repeat; }` | Activation de la zone pistonBowl dans une fenêtre CAD autour du PMH |

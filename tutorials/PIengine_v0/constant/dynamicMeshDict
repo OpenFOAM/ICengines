@@ -1,10 +1,6 @@
 /*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Version:  dev
-     \\/     M anipulation  |
-\*---------------------------------------------------------------------------*/
+  \\      /  F ield         | OpenFOAM: The last Op    \*---------------------------------------------------------------------------*/
 FoamFile
 {
     format          ascii;
@@ -13,53 +9,112 @@ FoamFile
     object          dynamicMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// ============================================================================
+// PIengine_v0 — dynamicMeshDict
+// ----------------------------------------------------------------------------
+// Deux rôles :
+//   1. "mover"      : comment le maillage est DEFORMÉ entre deux remaillages
+//                     (piston + soupapes en continu, pendant le calcul) ;
+//   2. "topoChanger": le basculement meshToMesh vers les polyMesh pré-calculés
+//                     de constant/meshes/<t>/ à chaque instant de remaillage.
+//
+// NOTE : ce dictionnaire RÉUTILISE les définitions d'engineDict par références
+// croisées (${engineDict!...}) -> une seule source de vérité : si tu changes
+// la course ou une loi de levée dans engineDict, le mover suit automatiquement.
+// ============================================================================
 
 mover
 {
+    // multiValveEngine : mover spécialisé moteur multi-soupapes d'AATE/OpenFOAM-14
     type                                multiValveEngine;
     libs                                ( "libfvMeshMoversMultiValveEngine.so" );
-    slidingPatches                      (liner ".*stem.*");
+
+    // slidingPatches : patches où le maillage GLISSE (recouvrement entre la
+    // pièce mobile et la paroi fixe). Ici la chemise (liner qui s'étire) et
+    // les 4 TIGES de soupapes (notées "Steam" dans les STL — attention à la
+    // regex, le nom réel des fichiers est Steam, pas Stem).
+    slidingPatches                      (liner ".*Steam.*");
+
+    // Patches formant la chemise (pour le contrôle du scaling)
     linerPatches                        (liner);
+
+    // ---------------------------- PISTON ----------------------------------
     piston
     {
-        patches                         (piston);
+        patches                         (piston);          // patch animé
+        // Axe et loi de mouvement HÉRITÉS d'engineDict :
         axis                            ${engineDict!patches/piston/geometryMotion/axis};
         motion
         {
             ${engineDict!patches/piston/geometryMotion/motion};
         }
 
-        frozenZones                     (cylinderHead);
-        movingZones                     (pistonBowl);
+        // Zones (définies dans zonesGenerator) contrôlant la déformation :
+        frozenZones                     (cylinderHead);  // points ANCRÉS (immobiles)
+        movingZones                    (pistonBowl);    // points qui SUIVENT le piston
 
+        // Épaisseur de la couche de transition mobile/figée [m]
         movingFrozenLayerThickness      0.0001;
+        // Intervalle de recalage (fraction de course) :
         travelInterval                  #calc "$motion/stroke * 0.05";
+        // Adoucissement cosinus de la déformation (0..1)
         cosineScale   0.8;
     }
 
+    // ---------------------------- SOUPAPES --------------------------------
+    // Une entrée PAR soupape. Chaque entrée référence le patch *_head et
+    // hérite axe/minLift/loi de levée d'engineDict.
     valves
     {
-        intakeValve
+        // ---- Admission 1 ----
+        intakeValve1
         {
-            patches                     (iv_head);
-            axis                        ${engineDict!patches/iv_head/geometryMotion/axis};
-            minLift                     ${engineDict!patches/iv_head/geometryMotion/minLift};
+            patches                     (iv1_head);
+            axis                        ${engineDict!patches/iv1_head/geometryMotion/axis};
+            minLift                     ${engineDict!patches/iv1_head/geometryMotion/minLift};
 
             motion
             {
-                ${engineDict!patches/iv_head/geometryMotion/motion};
+                ${engineDict!patches/iv1_head/geometryMotion/motion};
             }
         }
 
-        exhaustValve
+        // ---- Admission 2 ----
+        intakeValve2
         {
-            patches                     (ev_head);
-            axis                        ${engineDict!patches/ev_head/geometryMotion/axis};
-            minLift                     ${engineDict!patches/ev_head/geometryMotion/minLift};
+            patches                     (iv2_head);
+            axis                        ${engineDict!patches/iv2_head/geometryMotion/axis};
+            minLift                     ${engineDict!patches/iv2_head/geometryMotion/minLift};
 
             motion
             {
-                ${engineDict!patches/ev_head/geometryMotion/motion};
+                ${engineDict!patches/iv2_head/geometryMotion/motion};
+            }
+        }
+
+        // ---- Échappement 1 ----
+        exhaustValve1
+        {
+            patches                     (ev1_head);
+            axis                        ${engineDict!patches/ev1_head/geometryMotion/axis};
+            minLift                     ${engineDict!patches/ev1_head/geometryMotion/minLift};
+
+            motion
+            {
+                ${engineDict!patches/ev1_head/geometryMotion/motion};
+            }
+        }
+
+        // ---- Échappement 2 ----
+        exhaustValve2
+        {
+            patches                     (ev2_head);
+            axis                        ${engineDict!patches/ev2_head/geometryMotion/axis};
+            minLift                     ${engineDict!patches/ev2_head/geometryMotion/minLift};
+
+            motion
+            {
+                ${engineDict!patches/ev2_head/geometryMotion/motion};
             }
         }
     }
@@ -68,11 +123,16 @@ mover
 
 topoChanger
 {
+    // meshToMesh : bascule vers le maillage pré-calculé de l'instant suivant
+    // en INTERPOLANT tous les champs (p, U, T, k, omega, tracer...) entre
+    // l'ancien et le nouveau polyMesh.
     type                                meshToMesh;
     libs                                ( "libmeshToMeshTopoChanger.so" );
+    // Liste des instants de remaillage : générée par Allmesh dans
+    // constant/meshTimes (une ligne par instant CAD).
     times                               ( #include "$FOAM_CASE/constant/meshTimes" );
-    repeat                              720;
-    timeDelta                           1e-06;
+    repeat                              720;    // périodicité du cycle (multi-cycles)
+    timeDelta                           1e-06;  // tolérance d'appariement des instants
 }
 
 

@@ -431,6 +431,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | STL + `engineDict.{coarse,fine}` | **Soupapes échappement décalées** : pièces EV_1/EV_2 (Steam, Angle, Seat, Bottom, Bottom_Side) translatées de **−1 mm** en z (CAO = 1 mm sous la position fermée, style tcc3 EV 9.5e-4) ; `initialPosition 0.001` dans `ev1_stem`/`ev2_stem` (à t=0, EV remonte de 1 mm → fermée). `*_Cut` translatés **+1 mm** (décoplanarisation plan culasse) — les collaires restent ancrés à la culasse, comme tcc3 | Symptôme persistant « cellules extérieures non supprimées » (cf. §21.11) |
 | 2026-11-03 | `Allmesh` | **Mode débogage** : `DEBUG_MESH=1 ./Allmesh` = un seul maillage à l'instant 0 (saute predictRemeshInstants, écrit 0 dans meshTimes) | Débogage géométrie/maillage (cf. §21.10) |
 | 2026-11-03 | `constant/geometry/supportSurfaces/*_Cut.stl` | Nouveaux ValveCut validés : colliers cylindriques r=14,5 mm, z[-0.005,0], enjambant sièges et traversant les parois (2 mm de pénétration) — conforme au design tcc3 ✓ | Correction CAO utilisateur |
 | 2026-11-03 | `Allmesh` | `generateMesh` introuvable via PATH (script du dépôt, pas un utilitaire OpenFOAM) → Allmesh le localise désormais via `../../bin/generateMesh` avec repli sur le PATH | Erreur "generateMesh: not found" au premier maillage (cf. §21.8) |
@@ -647,3 +648,30 @@ d'aire avant de conclure.
 
 Sortie du mode : `./Allclean` puis `./Allmesh` normal. Les utilitaires
 `moveSurfaces`/`engineMeshConfig` acceptent aussi `-times "(0)"` manuellement.
+
+### 21.11 Décalage des soupapes d'échappement (style tcc3)
+
+Pour reproduire la convention tcc3 (EV : CAO 0,95 mm sous la fermée,
+`initialPosition 9.5e-4`), les pièces des soupapes d'échappement ont été
+translatées de −1 mm en z dans les STL, et `initialPosition 0.001` déclaré
+dans `ev1_stem`/`ev2_stem` :
+
+```
+déplacement(t) = lift(t) − 0.001
+```
+
+À t=0 : lift=0 → déplacement = −0,001 → la soupape REMONTE de 1 mm dans
+`moveSurfaces` → position fermée. Le maillage de t=0 est inchangé ; seule la
+position de RÉFÉRENCE CAO diffère (comme tcc3). Les admissions restent
+fermées en CAO (`initialPosition 0`).
+
+Commandes équivalentes OpenFOAM-14 (syntaxe : transformation = argument
+positionnel, PAS une option) :
+
+```bash
+surfaceTransformPoints "translate=(0 0 -0.001)" EV_1_Bottom.stl out.stl
+```
+
+NOTE : les collaires `*_Cut` ne suivent PAS les soupapes vers le bas — ils
+restent positionnés par rapport à la culasse (tcc3 : ses deux collaires à la
+même hauteur au-dessus du plan de culasse alors que sa CAO EV est décalée).

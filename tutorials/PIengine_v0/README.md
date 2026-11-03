@@ -434,6 +434,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `PN_Crevice.stl` | **Crash meshToMesh à 33,79° diagnostiqué et corrigé** : le maillage de remaillage 33,79 avait **99 régions** (3 volumes sains + ~96 îlots) — l'anneau du crevice (gap 1 mm, marginal vs cellules 0,5–1 mm) s'y était fragmenté en slivers déconnectés, tuant le mapping (`cellsToCellsStabilisation`, cellule à r=49,04). Correctif v0 : **anneau réduit à r ∈ [48,9 ; 49,9]** (échelle radiale 0,998) → gap de 0,1 mm vers la chemise, systématiquement fermé par le snap à tous les instants → comportement déterministe, crevice exclu du domaine fluide en v0. V1 : gap ≥ 2 mm en CAO pour réintroduire le blow-by | Crash au 1er remaillage (cf. §22.9) |
 | 2026-11-03 | `README.md` | **§22 « Récit complet du débogage »** : trace chronologique de toute l'enquête (phases 0-5, hypothèses réfutées, errata, méthode de bissection, 6 leçons méthodologiques, état final + dette technique v0). Sommaire complété (20-22) | Traçabilité des recherches (demande utilisateur) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **VRAIE cause des ~9000 instants : `scale 0.001` MANQUANT sur les blocs EV** — exhaustLift.txt est en mm (max 8,89 mm) et tcc3 l'enveloppe de `scale 0.001` (mm→m) ; notre motion EV lisait la table en MÈTRES (levée 1000× trop grande). Preuves : racines forcedPos à 110,5° = angle où le CSV brut vaut 0,0005 (et non 0,5 mm) ; insensibilité aux correctifs initialPosition/clearance. Correctif : `scale 0.001` + `repeat` imbriqué, comme tcc3. Conséquence évitée de justesse : moveSurfaces aurait descendu les EV de 3 cm | Bug d'unités CSV (cf. §21.14ter) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **Erratum + vrai fix des 9023** : le revert EV n'a RIEN changé (résultat identique) — preuve que `patchRemesh` ne lit PAS `initialPosition` (il lit la table `motion` brute). Vraie cause : `clearance = minLift = 0,0005` dans les remeshControl des soupapes → seuil relatif = 0,35×(lift+0,5mm) ≈ 0,2–0,9 mm près de la fermeture → rafale à chaque degré des rampes (EVO 109°, etc.) ×4 soupapes ×2 événements = 9023. **Fix : `clearance 0.005`** (normalisateur ≈ levée max/2) dans les 4 blocs soupapes | Rafale du planning, 2e itération (cf. §21.14bis) |
@@ -960,3 +961,23 @@ hypothèse et oriente la suivante.
 | Instants critiques (ouvertures/fermetures) | à contrôler par checkMesh après génération |
 | Combustion | hors périmètre v0 (motored, tracer passif) |
 | Données expérimentales tcc3 (chamberPressure) | inutilisables (moteur différent) — à remplacer/supprimer des scripts de comparaison |
+
+### 22.9 Le crevice marginal : 99 régions à 33,79° (crash meshToMesh)
+
+Premier run : crash au premier remaillage (33,79°) — `cellsToCellsStabilisation`,
+cellule non connectée à r=49,04 mm (= l'anneau du crevice). Diagnostic (via
+mini-case checkMesh avec lien symbolique vers le polyMesh) : le maillage 33.79
+compte **99 régions** (3 volumes sains + ~96 îlots) alors que l'instant 0 en
+avait 3. Cause : le gap du crevice (1 mm) est marginal face aux cellules
+(0,5–1 mm) — selon l'alignement géométrie/octree (qui change avec la
+translation du piston), snappy le traverse proprement (t=0) ou le fragmente
+en îlots (33.79). Non déterministe d'un instant à l'autre → ingérable.
+
+Correctif v0 : réduction radiale de l'anneau (× 0,998 → r ∈ [48,9 ; 49,9]) :
+gap de 0,1 mm vers la chemise, sous la taille de toute cellule → fermé par
+le snap à TOUS les instants → déterministe. Le crevice (poche de blow-by)
+sort du domaine fluide en v0 — physique acceptable pour l'aérologie.
+
+Règle générale : toute fente/gap fluide doit être ≥ 3-4 cellules locales
+pour être maillé de façon déterministe ; sinon, le fermer (sous 1 cellule)
+ou l'élargir (CAO). Entre les deux : zone de non-déterminisme.

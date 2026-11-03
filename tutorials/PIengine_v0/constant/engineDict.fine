@@ -199,7 +199,7 @@ patches
             // Le mouvement (course) est le MÊME que celui du piston -> héritage :
             motion
             {
-                $../piston/geometryMotion/motion;
+                $../../../piston/geometryMotion/motion;   // 3 niveaux: motion->geometryMotion->liner->patches
             }
         }
 
@@ -402,7 +402,7 @@ patches
 
             motion
             {
-                $../../iv1_stem/geometryMotion/motion;  // même loi de levée que IV1
+                $../../../iv1_stem/geometryMotion/motion;   // même loi que IV1 (3 niveaux -> patches)
             }                                 // (TODO-USER : CSV séparé si levées
         }                                    //  différentes entre IV1 et IV2)
 
@@ -558,7 +558,7 @@ patches
 
             motion
             {
-                $../../ev1_stem/geometryMotion/motion;  // même loi que EV1
+                $../../../ev1_stem/geometryMotion/motion;   // même loi que EV1 (3 niveaux -> patches)
             }
         }
 

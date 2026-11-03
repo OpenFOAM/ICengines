@@ -430,6 +430,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
+| 2026-11-03 | `engineDict.{coarse,fine}` | **Bugfix** : références d'héritage relatives corrigées — `$../piston/...`, `$../../iv1_stem/...`, `$../../ev1_stem/...` → `$../../../...` (il faut 3 niveaux depuis un bloc `motion` : motion→geometryMotion→patch→patches) ; détecté par le FATAL IO ERROR ligne 216 au premier Allmesh | Erreur de syntaxe dict (cf. §21.6) |
 
 ## 19. TODO avant premier maillage
 
@@ -572,3 +573,18 @@ Si correction choisie via `initialPosition` : mettre `initialPosition 0.0009`
 | (à venir) | `constant/zonesGenerator` | Sans `sparkPlug`, ports adaptés | Cohérence avec la nouvelle culasse |
 | (à venir) | `constant/geometry/` | Remplacement des STL (§17) | Nouvelle CAO 4 soupapes |
 
+### 21.6 Piège de syntaxe : références d'héritage relatives (`$../...`)
+
+Le nombre de `../` se compte depuis le bloc **où vit la référence**, pas depuis
+le bloc qu'on écrit. Depuis l'intérieur d'un bloc `motion`
+(`patches/<p>/geometryMotion/motion`), il faut **3** niveaux pour remonter à
+`patches` :
+
+```
+motion { $../../../piston/geometryMotion/motion; }   // correct
+motion { $../piston/geometryMotion/motion; }         // FATAL IO ERROR
+```
+
+Règle : écrire la référence, puis compter les accolades ouvertes entre le bloc
+courant et `patches`. Les références absolues (`${engineDict!...}` dans
+dynamicMeshDict) ne sont pas soumises à ce piège.

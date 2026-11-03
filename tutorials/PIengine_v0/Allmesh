@@ -21,8 +21,18 @@ runApplication -o moveSurfaces
 # Write blockMeshDict, SnappyHexMeshDict, and meshQualityDict in the instants directory
 runApplication -o engineMeshConfig
 
-# Generate meshes sequentially
+# Generate meshes sequentially.
+# generateMesh is a script shipped in the repository (bin/generateMesh), not
+# an installed OpenFOAM utility: locate it relative to this case, fall back
+# to PATH if not found (e.g. if installed elsewhere).
+GENERATE_MESH="$(dirname "$0")/../../bin/generateMesh"
+if [ ! -x "$GENERATE_MESH" ]; then
+    GENERATE_MESH="generateMesh"
+fi
+
+echo "Using generateMesh: $GENERATE_MESH"
+
 for mesh in $(cat constant/meshTimes); do
-    generateMesh -cores "$NSLOTS" -mesh "$mesh"
+    "$GENERATE_MESH" -cores "$NSLOTS" -mesh "$mesh"
 done
 #------------------------------------------------------------------------------

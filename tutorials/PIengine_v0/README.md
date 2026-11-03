@@ -430,6 +430,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
+| 2026-11-03 | `Allmesh` | `generateMesh` introuvable via PATH (script du dépôt, pas un utilitaire OpenFOAM) → Allmesh le localise désormais via `../../bin/generateMesh` avec repli sur le PATH | Erreur "generateMesh: not found" au premier maillage (cf. §21.8) |
 | 2026-11-03 | `constant/geometry/` + `.gitignore` | **Incident corrigé** : les 36 STL avaient disparu du dépôt (le `.gitignore` global contient `*.stl` ; le `git add` d'un déplacement les a silencieusement exclus et enregistré leur suppression). Restaurés avec `git add -f` + exceptions `!tutorials/PIengine_v0/constant/geometry/**` dans `.gitignore` | Piège git (§21.7) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **Bugfix** : références d'héritage relatives corrigées — `$../piston/...`, `$../../iv1_stem/...`, `$../../ev1_stem/...` → `$../../../...` (il faut 3 niveaux depuis un bloc `motion` : motion→geometryMotion→patch→patches) ; détecté par le FATAL IO ERROR ligne 216 au premier Allmesh | Erreur de syntaxe dict (cf. §21.6) |
 
@@ -607,3 +608,16 @@ Correctifs appliqués :
 
 Règle : après toute manipulation de fichiers STL dans le dépôt, vérifier avec
 `git ls-files tutorials/PIengine_v0/constant/geometry | wc -l` (attendu : 36).
+
+### 21.8 `generateMesh` : script du dépôt, pas un utilitaire OpenFOAM
+
+`generateMesh` vit dans `bin/` du dépôt (il lance blockMesh+snappyHexMesh,
+localement ou via SGE/SLURM). Il n'est PAS installé par OpenFOAM : si `bin/`
+n'est pas dans le PATH, Allmesh échoue avec « generateMesh: not found ».
+
+Correctifs :
+- immédiat : `export PATH="$PATH:<repo>/bin"`, puis relancer la boucle à la main ;
+- durable (appliqué dans Allmesh) : le script cherche
+  `$(dirname $0)/../../bin/generateMesh` et retombe sur le PATH.
+
+Vérification : `which generateMesh` doit rendre un chemin avant de lancer.

@@ -423,6 +423,11 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `constant/dynamicMeshDict` | Bloc `valves` : 4 entrées (`intakeValve1/2`, `exhaustValve1/2`) ; `slidingPatches` regex `.*Steam.*` ; commentaires | Mover des 4 soupapes (références croisées engineDict) |
 | 2026-10-22 | `constant/zonesGenerator` | Sans `sparkPlug` ; `chamber` héritée d'engineDict ; boîte échappement adaptée aux mesures STL ; commentaires | Cohérence avec la nouvelle culasse |
 | 2026-10-22 | `README.md` | §18.1 table de correspondance noms réels ; §20 glossaire des paramètres | Documentation des dicts commentés |
+| 2026-10-22 | `constant/engineDict.{coarse,fine}` | Décisions utilisateur : course/bielle gardées (0,086/0,231 m), CAO piston = PMH, `clearance 0.017` (mesuré : 17 mm), `minLift` validé 0,5 mm | Données moteur fournies |
+| 2026-10-22 | `constant/engineData/` | Lois de levée : CSV de tcc3 conservés (déjà présents par la copie) — IV1=IV2 partagent `intakeLift.txt`, EV1=EV2 partagent `exhaustLift.txt` | Décision utilisateur |
+| 2026-10-22 | `0.orig/p` | Pressions aux bornes CONSTANTES (inlet 0,95 bar / outlet 1 bar, `uniformTotalPressure` sans table CSV) ; état initial estimé : 1 bar partout | Décision utilisateur |
+| 2026-10-22 | `0.orig/T` | État initial estimé (motored froid) : 300 K partout sauf échappement 350 K ; parois 300 K | Estimation à affiner |
+| 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
 | (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, sièges à 1 tranche, `sparkplug` supprimé, conduits à 4 fichiers) | Adaptation à la nouvelle géométrie |
 | (à venir) | `constant/dynamicMeshDict` | Bloc `valves` : `intakeValve2`, `exhaustValve2` | Mover des 2 nouvelles soupapes |
 | (à venir) | `constant/engineData/` | CSV de levée ×4 + pressions | Lois propres à PIengine_v0 |
@@ -431,11 +436,11 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 
 ## 19. TODO avant premier maillage
 
-- [ ] Recevoir et vérifier les STL (`surfaceCheck` : fermeture, orientation, unités m)
-- [ ] Adapter `engineDict.coarse` (et `.fine`) — 4 soupapes, insidePoints, raffinements
-- [ ] Adapter `dynamicMeshDict` (4 valves, slidingPatches regex)
-- [ ] Adapter `zonesGenerator` (chambre, ports, cylinderHead/pistonBowl)
-- [ ] Fournir/générer les CSV `engineData` (levées, pressions)
+- [x] Recevoir et vérifier les STL (réceptionnés, bounding-boxes mesurées ; `surfaceCheck` complet à faire côté OpenFOAM)
+- [x] Adapter `engineDict.coarse` (et `.fine`) — 4 soupapes, insidePoints, raffinements
+- [x] Adapter `dynamicMeshDict` (4 valves, slidingPatches regex)
+- [x] Adapter `zonesGenerator` (chambre, ports, cylinderHead/pistonBowl)
+- [x] CSV `engineData` : levées tcc3 conservées ; pressions passées en constantes dans `0.orig/p`
 - [ ] Mettre à jour `Allmesh` si la géométrie n'est plus livrée en tar.gz
 - [ ] `./Allclean && ./Allmesh`
 - [ ] `checkMesh` sur `constant/meshes/0/polyMesh` **avant** la boucle complète

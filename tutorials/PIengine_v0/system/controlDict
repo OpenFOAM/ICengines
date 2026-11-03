@@ -57,7 +57,7 @@ maxDeltaT       0.25;
 userTime
 {
     type            engine;
-    rpm             800;
+    rpm             2500;
 }
 
 

@@ -20,7 +20,9 @@ internalField
 {
     type        zonal;
 
-    defaultValue    317.68;
+    // État initial ESTIMÉ (décision utilisateur, moteur « motored » froid) :
+    // ambiance partout, l'échappement un peu plus chaud (gaz résiduels).
+    defaultValue    300;
 
     zones
     {
@@ -28,7 +30,7 @@ internalField
         {
             type            lookup;
 
-            value           800;
+            value           300;
         }
 
         intakePort
@@ -42,7 +44,7 @@ internalField
         {
             type            lookup;
 
-            value           520;
+            value           350;
         }
     }
 }
@@ -53,7 +55,7 @@ boundaryField
     staticWall
     {
         type          fixedValue;
-        value         uniform 310.66;
+        value         uniform 300;     // parois froides (motored)
     }
 
     movingWall

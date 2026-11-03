@@ -153,8 +153,8 @@ patches
             motion
             {
                 type            crankConnectingRodMotion; // cinématique bielle-manivelle
-                conRodLength    0.231;   // TODO-USER : longueur de bielle [m]
-                stroke          0.086;   // TODO-USER : course du piston [m]
+                conRodLength    0.231;   // longueur de bielle [m] (gardée de tcc3)
+                stroke          0.086;   // course du piston [m] (gardée de tcc3)
             }
 
             remeshControl
@@ -164,7 +164,7 @@ patches
                 // relTol = fraction du déplacement précédent tolérée.
                 absTolerance                #calc "($motion/stroke)*0.25";
                 relTolerance                0.5;
-                clearance                   0.0095; // TODO-USER : clarance morte
+                clearance                   0.017;   // clarance morte (mesurée CAO : 17 mm)
                                                    // piston-culasse au PMH [m]
             }
         }
@@ -305,7 +305,7 @@ patches
         {
             type    valveMotion;             // mouvement de soupape (levée)
             axis    (0 0 1);                 // axe de la soupape (vertical)
-            minLift 0.0005;                  // TODO-USER : levée minimale [m] — la
+            minLift 0.0005;                  // (validé utilisateur) : levée minimale [m] — la
                                               // soupape n'est JAMAIS modélisée
                                               // totalement fermée ; évite les
                                               // maillages dégénérés au contact
@@ -397,7 +397,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // TODO-USER
+            minLift 0.0005;                  // (validé utilisateur)
             initialPosition 0;
 
             motion
@@ -469,7 +469,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // TODO-USER
+            minLift 0.0005;                  // (validé utilisateur)
             initialPosition 0;
 
             motion
@@ -553,7 +553,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // TODO-USER
+            minLift 0.0005;                  // (validé utilisateur)
             initialPosition 0;
 
             motion

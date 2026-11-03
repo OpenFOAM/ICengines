@@ -73,8 +73,8 @@ meshControl
     //   - point 2 : conduit d'admission (les volumes peuvent être déconnectés
     //               de la chambre quand les soupapes sont fermées)
     //   - point 3 : conduit d'échappement
-    // CAUTION : à repositionner si la position CAO du piston change
-    // (TODO-USER : valider après connaissance de la course).
+    // CAO piston = PMH (clarance 17 mm) : le point est 9 mm au-dessus de la
+    // couronne et 8 mm sous la culasse -> valide pour toutes les positions.
     insidePoints ((0 0 -0.013)(0 -0.031 0.02)(0 0.031 0.02));
 
     // patchInfo PAR DÉFAUT : toute surface non listée dans "patches" ci-dessous
@@ -146,15 +146,15 @@ patches
             type translationMotion;      // translation le long de "axis"
 
             axis   (0 0 1);               // axe du moteur (vertical ici)
-            initialPosition 0;            // position CAD de référence = 0
-                                          // (déplacement(t) = valeur(t) - ceci ;
-                                          //  0 signifie : CAO = position au CAD 0)
+            initialPosition 0;            // CAO piston = PMH (décision utilisateur) :
+                                          // déplacement(t) = valeur(t) - ceci ;
+                                          // 0 = CAO à la position de référence
 
             motion
             {
                 type            crankConnectingRodMotion; // cinématique bielle-manivelle
-                conRodLength    0.231;   // TODO-USER : longueur de bielle [m]
-                stroke          0.086;   // TODO-USER : course du piston [m]
+                conRodLength    0.231;   // longueur de bielle [m] (gardée de tcc3)
+                stroke          0.086;   // course du piston [m] (gardée de tcc3)
             }
 
             remeshControl
@@ -164,8 +164,14 @@ patches
                 // relTol = fraction du déplacement précédent tolérée.
                 absTolerance                #calc "($motion/stroke)*0.25";
                 relTolerance                0.5;
-                clearance                   0.0095; // TODO-USER : clarance morte
-                                                   // piston-culasse au PMH [m]
+                // clearance : clarance MORTE piston-culasse AU PMH [m].
+                // N'est PAS une position : elle sert uniquement dans le calcul
+                // des instants de remaillage (predictRemeshInstants) : le
+                // déplacement relatif est normalisé par (déplacement + clearance)
+                // -> évite des rapports dégénérés quand la chambre est minuscule
+                // au PMH. Mesuré sur la CAO (couronne à z=-0.022, culasse à
+                // z=-0.005) avec CAO piston = PMH : 17 mm.
+                clearance                   0.017;
             }
         }
 
@@ -305,7 +311,7 @@ patches
         {
             type    valveMotion;             // mouvement de soupape (levée)
             axis    (0 0 1);                 // axe de la soupape (vertical)
-            minLift 0.0005;                  // TODO-USER : levée minimale [m] — la
+            minLift 0.0005;                  // levée minimale [m] (validé) — la
                                               // soupape n'est JAMAIS modélisée
                                               // totalement fermée ; évite les
                                               // maillages dégénérés au contact
@@ -397,7 +403,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // TODO-USER
+            minLift 0.0005;                  // (validé)
             initialPosition 0;
 
             motion
@@ -469,7 +475,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // TODO-USER
+            minLift 0.0005;                  // (validé)
             initialPosition 0;
 
             motion
@@ -553,7 +559,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // TODO-USER
+            minLift 0.0005;                  // (validé)
             initialPosition 0;
 
             motion

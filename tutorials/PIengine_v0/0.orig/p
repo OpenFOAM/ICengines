@@ -20,6 +20,8 @@ internalField
 {
     type        zonal;
 
+    // État initial ESTIMÉ (décision utilisateur, moteur « motored » froid,
+    // pas de combustion en v0) : ambiance partout. A affiner si besoin.
     defaultValue    1 [bar];
 
     zones
@@ -28,14 +30,14 @@ internalField
         {
             type            lookup;
 
-            value           18 [bar];
+            value           1 [bar];
         }
 
         intakePort
         {
             type            lookup;
 
-            value           0.945 [bar];
+            value           0.95 [bar];
         }
 
         exhaustPort
@@ -61,6 +63,9 @@ boundaryField
         type        fixedFluxPressure;
     }
 
+    // Pressions aux bornes CONSTANTES (décision utilisateur : pas de tables
+    // CSV en fonction du CAD). Un simple uniformTotalPressure suffit — pour
+    // repasser aux tables, rétablir la syntaxe de tcc3 (p0 { type table; ... }).
     outlet
     {
         type            uniformTotalPressure;
@@ -68,37 +73,13 @@ boundaryField
         phi             phi;
         rho             rho;
         gamma           1.4;
-        p0
-        {
-            type            table;
-            format          csv;
-            file            "constant/engineData/exhaustPressure.txt";
-            nHeaderLine     2;          // Number of header lines
-            units           ([CAD] [Pa]);
-            columns         (0 1);      // Column indices
-            separator       ",";        // Optional (defaults to ",")
-            mergeSeparators yes;        // Merge multiple separators
-            outOfBounds     repeat;     // For multi-cycle simulations, use repeat
-            interpolationScheme linear;
-        }
+        p0              uniform 100000;   // 1 bar (échappement)
     }
 
     inlet
     {
         $outlet;
-        p0
-        {
-            type            table;
-            format          csv;
-            file            "constant/engineData/intakePressure.txt";
-            nHeaderLine     2;          // Number of header lines
-            units           ([CAD] [Pa]);
-            columns         (0 1);      // Column indices
-            separator       ",";        // Optional (defaults to ",")
-            mergeSeparators yes;        // Merge multiple separators
-            outOfBounds     repeat;     // For multi-cycle simulations, use repeat
-            interpolationScheme linear;
-        }
+        p0              uniform 95000;    // 0.95 bar (admission)
     }
 }
 

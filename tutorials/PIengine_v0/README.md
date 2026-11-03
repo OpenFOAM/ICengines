@@ -430,6 +430,9 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
+| 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `Allmesh` | **Mode débogage** : `DEBUG_MESH=1 ./Allmesh` = un seul maillage à l'instant 0 (saute predictRemeshInstants, écrit 0 dans meshTimes) | Débogage géométrie/maillage (cf. §21.10) |
+| 2026-11-03 | `constant/geometry/supportSurfaces/*_Cut.stl` | Nouveaux ValveCut validés : colliers cylindriques r=14,5 mm, z[-0.005,0], enjambant sièges et traversant les parois (2 mm de pénétration) — conforme au design tcc3 ✓ | Correction CAO utilisateur |
 | 2026-11-03 | `Allmesh` | `generateMesh` introuvable via PATH (script du dépôt, pas un utilitaire OpenFOAM) → Allmesh le localise désormais via `../../bin/generateMesh` avec repli sur le PATH | Erreur "generateMesh: not found" au premier maillage (cf. §21.8) |
 | 2026-11-03 | `constant/geometry/` + `.gitignore` | **Incident corrigé** : les 36 STL avaient disparu du dépôt (le `.gitignore` global contient `*.stl` ; le `git add` d'un déplacement les a silencieusement exclus et enregistré leur suppression). Restaurés avec `git add -f` + exceptions `!tutorials/PIengine_v0/constant/geometry/**` dans `.gitignore` | Piège git (§21.7) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **Bugfix** : références d'héritage relatives corrigées — `$../piston/...`, `$../../iv1_stem/...`, `$../../ev1_stem/...` → `$../../../...` (il faut 3 niveaux depuis un bloc `motion` : motion→geometryMotion→patch→patches) ; détecté par le FATAL IO ERROR ligne 216 au premier Allmesh | Erreur de syntaxe dict (cf. §21.6) |
@@ -621,3 +624,26 @@ Correctifs :
   `$(dirname $0)/../../bin/generateMesh` et retombe sur le PATH.
 
 Vérification : `which generateMesh` doit rendre un chemin avant de lancer.
+
+### 21.9 Erratum : le HD_Wall n'a jamais eu de trou central
+
+L'analyse raster du §précédent avait été mal interprétée : les 4 vides visibles
+sont les puits de soupapes, le centre (0,0) est couvert. Preuve arithmétique :
+aire des triangles (0,006862 m²) = aire du disque r=0,055 (0,009503) −
+4 × π × 0,0145² (0,002642) — aucun 5ᵉ trou. Le rayon minimal des sommets
+(0,0138 m) est le bord interne des puits (centre à 28,3 mm, rayon 14,5 mm),
+pas le rayon d'un trou central. Leçon : valider une « fuite » par le calcul
+d'aire avant de conclure.
+
+### 21.10 Mode débogage d'Allmesh (maillage unique)
+
+`DEBUG_MESH=1 ./Allmesh` :
+- saute `predictRemeshInstants` et écrit `0` dans `constant/meshTimes` ;
+- `moveSurfaces`/`engineMeshConfig` traitent uniquement l'instant 0 (les temps
+  venant de `meshTimes` via l'include d'`engineDict`) ;
+- la boucle génère un seul maillage : `constant/meshes/0/polyMesh` ;
+- contrôles : `checkMesh constant/meshes/0/polyMesh` + ParaView (vérifier que
+  seuls chambre + conduits sont maillés, que l'extérieur est supprimé).
+
+Sortie du mode : `./Allclean` puis `./Allmesh` normal. Les utilitaires
+`moveSurfaces`/`engineMeshConfig` acceptent aussi `-times "(0)"` manuellement.

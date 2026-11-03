@@ -434,6 +434,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-03 | `engineDict.{coarse,fine}` (v0+v1) | **Crash patchToPatch à 153,65° corrigé** : après 6 remaillages réussis (33,79→136,17 ✓ — le fix crevice tient !), crash au 7e sur `exhaustPort` (face à r=14,9 mm du siège EV, fente ~0,7–1 mm) : à la transition ouverte/fermée, la fente (sous-cellule à L3=2 mm) est scellée dans l'ancien maillage mais ouverte dans le nouveau → régions de patch non superposables. **Fix : `dynamicRefinement true; numberOfCells 3` réactivé sur les 4 sièges** (design tcc3 : 3 cellules à travers la fente à chaque remaillage) + sièges L4 — sûr désormais car la tempête de raffinement venait du bug scale EV, pas de ce mécanisme | 2e bug de géométrie marginale (cf. §22.11) |
 | 2026-11-03 | `PN_Crevice.stl` + `engineDict.{coarse,fine}` | **Décision utilisateur : garder le crevice → raffinement L6** (la réduction à 49,9 mm est ANNULÉE, anneau original r[49,50] restauré). Comparaison tcc3 : gap 0,3 mm @ L7 (0,125 mm) = 2,4 cellules à travers ; nous : gap 1 mm @ L5 = 2 cellules (marginal → fragmentation). Choix retenu : **L6 (0,25 mm) = 4 cellules à travers** — ratio meilleur que tcc3. Risques assumés : +cellules (~200 k dans l'anneau + coquilles de transition par instant), déformation mover des petites cellules entre remaillages | Décision utilisateur après comparaison tcc3 (cf. §22.10) |
 | 2026-11-03 | `PN_Crevice.stl` | **Crash meshToMesh à 33,79° diagnostiqué et corrigé** : le maillage de remaillage 33,79 avait **99 régions** (3 volumes sains + ~96 îlots) — l'anneau du crevice (gap 1 mm, marginal vs cellules 0,5–1 mm) s'y était fragmenté en slivers déconnectés, tuant le mapping (`cellsToCellsStabilisation`, cellule à r=49,04). Correctif v0 : **anneau réduit à r ∈ [48,9 ; 49,9]** (échelle radiale 0,998) → gap de 0,1 mm vers la chemise, systématiquement fermé par le snap à tous les instants → comportement déterministe, crevice exclu du domaine fluide en v0. V1 : gap ≥ 2 mm en CAO pour réintroduire le blow-by | Crash au 1er remaillage (cf. §22.9) |
 | 2026-11-03 | `README.md` | **§22 « Récit complet du débogage »** : trace chronologique de toute l'enquête (phases 0-5, hypothèses réfutées, errata, méthode de bissection, 6 leçons méthodologiques, état final + dette technique v0). Sommaire complété (20-22) | Traçabilité des recherches (demande utilisateur) |
@@ -999,3 +1000,21 @@ volume de cellules accru par instant (~200 k dans l'annulus + coquilles),
 qualité de la déformation du mover sur ces petites cellules entre remaillages
 (tcc3 le fait à stroke*0.05 de `travelInterval` et L7 sur 256 cœurs).
 Validation : `Number of regions: 3` attendu à chaque instant critique.
+
+### 22.11 La fente de siège à l'ouverture : crash patchToPatch à 153,65°
+
+Après validation du crevice (6 remaillages passés en vol), crash au 7e
+(153,65°) : `patchToPatchStabilisation`, patch `exhaustPort`, face à
+r=14,9 mm (bord du siège EV). Mécanisme : à l'ouverture, la fente
+soupape-siège grandit de sous-cellule (0,5 mm < cellule L3 = 2 mm :
+scellée par le snap dans l'ancien maillage) à intercellulaire (~1 mm :
+ouverte dans le nouveau) → les faces de patch ne se superposent plus
+entre maillages successifs → mapping fatal. Même famille que le crevice
+(§22.9) : géométrie marginale vs cellule, ici à la transition ouverte/fermée.
+
+Fix : **réactivation du `dynamicRefinement numberOfCells 3`** sur les 4
+sièges — le mécanisme tcc3 conçu pour ça (à chaque remaillage, la taille
+locale vise 3 cellules à travers la fente, quelle que soit sa largeur).
+Coupé pendant le débogage car suspecté de la tempête de raffinement, il
+est désormais sûr : cette tempête venait du bug scale EV (levée 1000×),
+pas de ce mécanisme. Sièges remontés à L4 (valeur tcc3).

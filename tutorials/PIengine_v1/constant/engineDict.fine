@@ -226,7 +226,7 @@ patches
             {
                 // Raffinements différenciés par STL :
                 IP_Wall     { surfaceRefinement 2; }
-                "IP_Seat.*" { surfaceRefinement 3; }   // v0
+                "IP_Seat.*" { surfaceRefinement 4; }   // tcc3
             }
         }
     }
@@ -242,7 +242,7 @@ patches
 
             surfaceControl
             {
-                "EP_Seat.*"   { surfaceRefinement 3; }
+                "EP_Seat.*"   { surfaceRefinement 4; }   // tcc3
             }
         }
     }
@@ -369,7 +369,12 @@ patches
             {
                 IV_1_Seat
                 {
-                    dynamicRefinement   false;   // DEBUG: désactivé (était true)
+                    dynamicRefinement   true;    // REACTIVÉ (design tcc3) : 3 cellules à travers la fente
+                                        // à chaque remaillage — indispensable aux ouvertures de soupapes
+                                        // (crash patchToPatch à 153.65° : fente 0.7-1mm vs cellules 2mm,
+                                        // scellée dans l'ancien maillage, ouverte dans le nouveau)
+                                        // Sûr désormais : la tempête de raffinement venait du bug
+                                        // scale EV (levée 1000x), pas de ce mécanisme
                     numberOfCells       3;        // remaillage : 3 cellules À TRAVERS
                                                 // la fente soupape-siège
                 }
@@ -443,7 +448,7 @@ patches
             {
                 IV_2_Seat
                 {
-                    dynamicRefinement   false;   // DEBUG
+                    dynamicRefinement   true;    // REACTIVÉ (design tcc3, cf. iv1_head)
                     numberOfCells       3;
                 }
             }
@@ -537,7 +542,7 @@ patches
             {
                 EV_1_Seat
                 {
-                    dynamicRefinement   false;   // DEBUG
+                    dynamicRefinement   true;    // REACTIVÉ (design tcc3, cf. iv1_head)
                     numberOfCells       3;
                 }
             }
@@ -609,7 +614,7 @@ patches
             {
                 EV_2_Seat
                 {
-                    dynamicRefinement   false;   // DEBUG
+                    dynamicRefinement   true;    // REACTIVÉ (design tcc3, cf. iv1_head)
                     numberOfCells       3;
                 }
             }

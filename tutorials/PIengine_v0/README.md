@@ -430,6 +430,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
+| 2026-11-03 | `constant/geometry/` + `.gitignore` | **Incident corrigé** : les 36 STL avaient disparu du dépôt (le `.gitignore` global contient `*.stl` ; le `git add` d'un déplacement les a silencieusement exclus et enregistré leur suppression). Restaurés avec `git add -f` + exceptions `!tutorials/PIengine_v0/constant/geometry/**` dans `.gitignore` | Piège git (§21.7) |
 | 2026-11-03 | `engineDict.{coarse,fine}` | **Bugfix** : références d'héritage relatives corrigées — `$../piston/...`, `$../../iv1_stem/...`, `$../../ev1_stem/...` → `$../../../...` (il faut 3 niveaux depuis un bloc `motion` : motion→geometryMotion→patch→patches) ; détecté par le FATAL IO ERROR ligne 216 au premier Allmesh | Erreur de syntaxe dict (cf. §21.6) |
 
 ## 19. TODO avant premier maillage
@@ -588,3 +589,21 @@ motion { $../piston/geometryMotion/motion; }         // FATAL IO ERROR
 Règle : écrire la référence, puis compter les accolades ouvertes entre le bloc
 courant et `patches`. Les références absolues (`${engineDict!...}` dans
 dynamicMeshDict) ne sont pas soumises à ce piège.
+
+### 21.7 Piège git : le `.gitignore` exclut `*.stl`
+
+Le `.gitignore` du dépôt OpenFOAM contient `*.stl` (c'est pourquoi tcc3 livre
+sa géométrie en `geometry.tar.gz`). Conséquences :
+
+- un `git add` de STL est **silencieusement ignoré** (aucun message) ;
+- un upload via l'interface web GitHub, lui, les ajoute ;
+- déplacer des STL suivis par git vers un chemin ignoré = commit de suppression.
+
+Correctifs appliqués :
+1. exceptions dans `.gitignore` :
+   `!tutorials/PIengine_v0/constant/geometry/*.stl` et
+   `!tutorials/PIengine_v0/constant/geometry/supportSurfaces/*.stl` ;
+2. réintégration forcée (`git add -f`), commit 72a61b9.
+
+Règle : après toute manipulation de fichiers STL dans le dépôt, vérifier avec
+`git ls-files tutorials/PIengine_v0/constant/geometry | wc -l` (attendu : 36).

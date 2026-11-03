@@ -73,9 +73,17 @@ meshControl
     //   - point 2 : conduit d'admission (les volumes peuvent être déconnectés
     //               de la chambre quand les soupapes sont fermées)
     //   - point 3 : conduit d'échappement
-    // CAO piston = PMH (clarance 17 mm) : le point est 9 mm au-dessus de la
-    // couronne et 8 mm sous la culasse -> valide pour toutes les positions.
-    insidePoints ((0 0 -0.013)(0 -0.031 0.02)(0 0.031 0.02));
+    // CAO piston = PMH (clarance 17 mm) : le point chambre est 9 mm au-dessus
+    // de la couronne et 8 mm sous la culasse -> valide pour toutes les
+    // positions (la chambre ne fait que grandir quand le piston descend).
+    //   - chambre     : (0 0 -0.013)   centre du volume, axe cylindre
+    //   - intakePort  : (0 -0.045 0.03)  conduit d'admission, à mi-hauteur,
+    //                   entre les 2 puits de soupapes (y=-0.045 = zone large
+    //                   du port, loin des sièges y[-0.0345,-0.0055])
+    //   - exhaustPort : (0 0.045 0.03)   idem côté échappement
+    // NOTE : les points des conduits sont FIXES (conduits immobiles) ->
+    // toujours dans le fluide ; seul le point chambre dépend du piston.
+    insidePoints ((0 0 -0.013)(0 -0.045 0.03)(0 0.045 0.03));
 
     // patchInfo PAR DÉFAUT : toute surface non listée dans "patches" ci-dessous
     // hérite de ce groupe -> paroi fixe (noSlip, zeroGradient...). C'est le cas

@@ -428,11 +428,8 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `0.orig/p` | Pressions aux bornes CONSTANTES (inlet 0,95 bar / outlet 1 bar, `uniformTotalPressure` sans table CSV) ; état initial estimé : 1 bar partout | Décision utilisateur |
 | 2026-10-22 | `0.orig/T` | État initial estimé (motored froid) : 300 K partout sauf échappement 350 K ; parois 300 K | Estimation à affiner |
 | 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
-| (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, sièges à 1 tranche, `sparkplug` supprimé, conduits à 4 fichiers) | Adaptation à la nouvelle géométrie |
-| (à venir) | `constant/dynamicMeshDict` | Bloc `valves` : `intakeValve2`, `exhaustValve2` | Mover des 2 nouvelles soupapes |
-| (à venir) | `constant/engineData/` | CSV de levée ×4 + pressions | Lois propres à PIengine_v0 |
-| (à venir) | `constant/zonesGenerator` | Sans `sparkPlug`, ports adaptés | Cohérence avec la nouvelle culasse |
-| (à venir) | `constant/geometry/` | Remplacement des STL (§17) | Nouvelle CAO 4 soupapes |
+| 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
+| 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 
 ## 19. TODO avant premier maillage
 
@@ -502,3 +499,76 @@ Ce glossaire sert de référence rapide.
 | `$engineDict!...` | Héritage d'une définition d'engineDict (raffinement ↔ zone cohérents) |
 | `cylinderHeadPoints` / `pistonBowlPoints` | PointZones du mover (frozen/moving) recalculées après remaillage (`moveUpdate`) |
 | `periodic { begin; end; deactivate; repeat; }` | Activation de la zone pistonBowl dans une fenêtre CAD autour du PMH |
+
+## 21. Notes de validation et remarques importantes
+
+### 21.1 Rôle exact de `clearance` (≠ position du piston)
+
+La position du piston vient uniquement de la cinématique
+(`stroke`/`conRodLength`/`initialPosition`). `clearance` **ne positionne rien** :
+il est utilisé uniquement par `predictRemeshInstants`
+(`applications/utilities/predictRemeshInstants/remesh/patchRemesh.C:80`) : le
+déplacement relatif du piston est normalisé par `(déplacement précédent +
+clearance)`. Sans cela, près du PMH (chambre minuscule), un petit déplacement
+absolu représenterait un changement relatif énorme et forcerait des remaillages
+à chaque pas. Valeur PIengine_v0 : **0,017 m** (mesuré CAO au PMH : couronne
+z = −0,022, culasse z = −0,005).
+
+### 21.2 Convention de hauteur de la chemise (scalingMotion)
+
+La CAO de la chemise représente sa position **la plus courte (PMH)** ; le mover
+`scalingMotion` l'**étire** (facteur > 1) à mesure que le piston descend, pour
+qu'elle couvre toujours culasse → piston. Vérifié sur tcc3 : sa chemise fait
+exactement sa clarance PMH (9,5 mm). PIengine_v0 : chemise 20 mm au PMH
+(17 mm de chambre + 3 mmm dans la zone crevice) → **conforme à la convention**.
+NE PAS modéliser la chemise « haute au PMB » : elle serait comprimée au PMH.
+
+### 21.3 `insidePoints` — position retenue et raisonnement
+
+Un point par volume fluide déconnectable, TOUJOURS dans le fluide (les points
+sont recopiés dans le snappyHexMeshDict de chaque instant) :
+
+| Volume | Point | Justification |
+|---|---|---|
+| Chambre | `(0 0 -0.013)` | 8 mm sous la culasse, 9 mm au-dessus de la couronne au PMH ; la chambre ne fait que grandir ensuite (le seul point dépendant du piston) |
+| IntakePort | `(0 -0.045 0.03)` | zone large du conduit, mi-hauteur, loin des puits de soupapes ; conduit immobile → toujours valide |
+| ExhaustPort | `(0 0.045 0.03)` | idem côté échappement |
+
+⚠️ Première version `(±0.031 0.02)` : écartée car trop proche de la bande des
+sièges (y ∈ [±0.0345, ±0.0055]) — si un rib central sépare les deux puits dans
+le port, le point serait dans le solide. À **valider au premier Allmesh**
+(snappy garde le volume contenant chaque point ; vérifier que chamber + ports
+sont bien les 3 volumes attendus).
+
+### 21.4 Affrontement soupape/siège à la fermeture — point d'attention CAO
+
+Mesure CAO (soupapes fermées) : faces `IV/EV_?_Bottom` à z = −0,0059 ; plan des
+sièges (`IP/EP_Seat_?`) à z ∈ [−0,0050, −0,0030] → la face de soupape **pénètre
+de 0,9 mm sous le plan d'appui du siège**. Interprétations possibles :
+
+- soit la position CAO fermée correspond effectivement à un léger enfoncement
+  (certaines CAO coupent la soupape au plan du siège) : acceptable, le maillage
+  « voit » une soupape affrontée, mais **à vérifier en CAO** ;
+- soit c'est une interférence à corriger (remonter la soupape de 0,9 mm ou
+  ajuster `initialPosition` — cf. §13 : `déplacement(t) = lift(t) −
+  initialPosition`).
+
+Si correction choisie via `initialPosition` : mettre `initialPosition 0.0009`
+(déclarer « CAO = levée 0,9 mm ») — le reste suit automatiquement.
+
+### 21.5 Divers
+
+- Coquille de nomenclature conservée : `Steam` au lieu de `Stem` (fichiers et
+  dicts cohérents entre eux, regex du mover `.*Steam.*`).
+- Les CSV `intakePressure.txt`/`exhaustPressure.txt` ne sont plus référencés
+  (pressions constantes dans `0.orig/p`) mais restés dans `engineData/` pour
+  un éventuel retour aux tables.
+- `chamberPressure.txt` (donnée expérimentale tcc3) : **inutilisable pour
+  PIengine_v0** (moteur différent) — à remplacer par des essais ou à supprimer
+  des scripts de comparaison (`plot_scripts/chamberPressure.py`).
+| (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, sièges à 1 tranche, `sparkplug` supprimé, conduits à 4 fichiers) | Adaptation à la nouvelle géométrie |
+| (à venir) | `constant/dynamicMeshDict` | Bloc `valves` : `intakeValve2`, `exhaustValve2` | Mover des 2 nouvelles soupapes |
+| (à venir) | `constant/engineData/` | CSV de levée ×4 + pressions | Lois propres à PIengine_v0 |
+| (à venir) | `constant/zonesGenerator` | Sans `sparkPlug`, ports adaptés | Cohérence avec la nouvelle culasse |
+| (à venir) | `constant/geometry/` | Remplacement des STL (§17) | Nouvelle CAO 4 soupapes |
+

@@ -75,7 +75,7 @@ meshControl
     //   - point 3 : conduit d'échappement
     // CAUTION : à repositionner si la position CAO du piston change
     // (TODO-USER : valider après connaissance de la course).
-    insidePoints ((0 0 -0.013)(0 -0.031 0.02)(0 0.031 0.02));
+    insidePoints ((0 0 -0.013)(0 -0.045 0.03)(0 0.045 0.03));   // cf. engineDict.coarse pour les commentaires
 
     // patchInfo PAR DÉFAUT : toute surface non listée dans "patches" ci-dessous
     // hérite de ce groupe -> paroi fixe (noSlip, zeroGradient...). C'est le cas

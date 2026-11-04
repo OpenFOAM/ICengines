@@ -1,0 +1,78 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  14
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 14-a4867fc914c1
+Exec   : blockMesh -dict system/blockMeshDict -region main
+Date   : Nov 04 2026
+Time   : 14:06:57
+Host   : "Ubuntu-PANCIN"
+PID    : 29604
+I/O    : collated (maxThreadFileBufferSize 2e+09)
+         Threading activated since maxThreadFileBufferSize > 0.
+         Requires large enough buffer to collect all data or thread support 
+         enabled in MPI. If thread support cannot be enabled, deactivate
+         threading by setting maxThreadFileBufferSize to 0 in
+         $FOAM_ETC/configDict
+Case   : /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136
+nProcs : 1
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStamp (fileModificationSkew 10)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+
+Selecting userTime engine
+
+Generating mesh for region main
+Reading "system/blockMeshDict"
+
+Creating block mesh from
+    "/home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/system/blockMeshDict"
+Creating block edges
+No non-planar block faces defined
+Creating topology blocks
+Creating topology patches
+
+Creating block mesh topology
+
+Basic statistics
+    Number of internal faces : 0
+    Number of boundary faces : 6
+    Number of defined boundary faces : 6
+    Number of undefined boundary faces : 0
+
+Checking topology
+Creating block offsets
+Creating merge list .
+
+Creating polyMesh from blockMesh
+Creating patches
+Creating cells
+Creating points with scale 1
+    Block 0 cell size :
+        i : 0.016
+        j : 0.016
+        k : 0.016 .. 0.016
+
+Writing polyMesh
+----------------
+Mesh Information
+----------------
+  boundingBox: (-0.064 -0.064 -0.112) (0.064 0.064 0.08)
+  nPoints: 1053
+  nCells: 768
+  nFaces: 2560
+  nInternalFaces: 2048
+----------------
+Patches
+----------------
+  patch 0 (start: 2048 size: 512) name: background
+
+End
+

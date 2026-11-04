@@ -1,0 +1,92 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  14
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 14-a4867fc914c1
+Exec   : reconstructPar -constant -region main
+Date   : Nov 04 2026
+Time   : 14:08:32
+Host   : "Ubuntu-PANCIN"
+PID    : 30675
+I/O    : collated (maxThreadFileBufferSize 2e+09)
+         Threading activated since maxThreadFileBufferSize > 0.
+         Requires large enough buffer to collect all data or thread support 
+         enabled in MPI. If thread support cannot be enabled, deactivate
+         threading by setting maxThreadFileBufferSize to 0 in
+         $FOAM_ETC/configDict
+Case   : /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136
+nProcs : 1
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStamp (fileModificationSkew 10)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+Reconstructing meshes
+
+    Merging mesh 0 with 1
+    Merging mesh 2 with 3
+    Merging mesh 4 with 5
+    Merging mesh 6 with 7
+    Merging mesh 8 with 9
+    Merging mesh 10 with 11
+    Merging mesh 12 with 13
+    Merging mesh 14 with 15
+    Merging mesh 0 with 2
+    Merging mesh 4 with 6
+    Merging mesh 8 with 10
+    Merging mesh 12 with 14
+    Merging mesh 0 with 4
+    Merging mesh 8 with 12
+    Merging mesh 0 with 8
+
+Time = constant
+
+Reconstructing FV fields
+
+    (no FV fields)
+
+Reconstructing point fields
+
+    (no point fields)
+
+End
+

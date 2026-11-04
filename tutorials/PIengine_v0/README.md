@@ -1,0 +1,1055 @@
+# PIengine_v0 — Cas moteur 4 soupapes (dérivé de tcc3)
+
+> **Statut : préparation.** Ce cas est une copie de `tutorials/tcc3` (OpenFOAM-14 / AATE)
+> en cours d'adaptation vers un moteur à **4 soupapes**. Ce document reprend l'ensemble
+> des questions posées pendant l'étude du framework et leurs réponses, puis servira de
+> **journal des modifications** au fur et à mesure de l'adaptation.
+
+## Sommaire
+
+1. [Objectif du cas](#1-objectif-du-cas)
+2. [Comment la géométrie est construite à partir des STL](#2-comment-la-géométrie-est-construite-à-partir-des-stl)
+3. [Pipeline de maillage (Allmesh)](#3-pipeline-de-maillage-allmesh)
+4. [Inventaire du cas tcc3 et correspondance des STL](#4-inventaire-du-cas-tcc3-et-correspondance-des-stl)
+5. [Les 4 conditions aux limites](#5-les-4-conditions-aux-limites)
+6. [Paramètres cinématiques : où est quoi](#6-paramètres-cinématiques--où-est-quoi)
+7. [insidePoints : à quoi ça sert](#7-insidepoints--à-quoi-ça-sert)
+8. [Calage des soupapes : les CSV](#8-calage-des-soupapes--les-csv)
+9. [Les dossiers polyMesh de constant/meshes](#9-les-dossiers-polymesh-de-constantmeshes)
+10. [Paramètres à revoir lors d'un changement de géométrie](#10-paramètres-à-revoir-lors-dun-changement-de-géométrie)
+11. [zonesGenerator en détail](#11-zonesgenerator-en-détail)
+12. [Pourquoi 3 STL par siège (dans tcc3) et choix PIengine_v0](#12-pourquoi-3-stl-par-siège-dans-tcc3-et-choix-piengine_v0)
+13. [Position CAO des soupapes et initialPosition](#13-position-cao-des-soupapes-et-initialposition)
+14. [Les supportSurfaces (ValveCut)](#14-les-supportsurfaces-valvecut)
+15. [Ajouter des pièces / CL non conventionnelles (entretoise)](#15-ajouter-des-pièces--cl-non-conventionnelles-entretoise)
+16. [Le cas imperialcollege (modèle minimal)](#16-le-cas-imperialcollege-modèle-minimal)
+17. [Bilan des fichiers STL pour PIengine_v0](#17-bilan-des-fichiers-stl-pour-piengine_v0)
+18. [Modifications effectuées (journal)](#18-modifications-effectuées-journal)
+19. [TODO avant premier maillage](#19-todo-avant-premier-maillage)
+20. [Glossaire des paramètres des dictionnaires](#20-glossaire-des-paramètres-des-dictionnaires-réponses-aux-questions)
+21. [Notes de validation, errata et pièges documentés](#21-notes-de-validation-et-remarques-importantes)
+22. [Récit complet du débogage (trace des recherches)](#22-récit-complet-du-débogage-trace-des-recherches)
+
+---
+
+## 1. Objectif du cas
+
+Dériver le cas `tcc3` (TCC-III, moteur 4-temps, 2 soupapes) vers un moteur à
+**4 soupapes** (2 admission + 2 échappement), en conservant :
+
+- le **piston** (`PN_Topland`, `PN_Crevice`) et la **chemise** (`LN_Wall`) de tcc3,
+- la méthodologie de remaillage AATE (multi-maillages + interpolation `meshToMesh`).
+
+Décisions de découpage CAO (v0) :
+
+- soupapes : **5 fichiers par soupape** (`Stem`, `Angle`, `Seat`, `Bottom`,
+  `Bottom_Side`), comme tcc3 — voir §17 ;
+- sièges (dans la culasse, côté conduit) : **1 seule tranche** par soupape
+  (tcc3 en utilise 3, voir §12) → `Seat_1`, `Seat_2` par conduit ;
+- conduits admission/échappement : **4 fichiers par conduit** (`Inlet`/`Outlet`,
+  `Wall` commun aux 2 soupapes du conduit, `Seat_1`, `Seat_2`) ;
+- **bougie** : paroi plate fusionnée dans la culasse en v0 (pas de STL dédié) ;
+- soupapes modélisées **fermées** dans la CAO (`initialPosition 0` partout, voir §13).
+
+## 2. Comment la géométrie est construite à partir des STL
+
+**Il n'y a pas de dictionnaire classique référençant les STL** (pas de bloc
+`geometry` dans un `snappyHexMeshDict` écrit à la main). Tout est piloté par le
+dictionnaire **`constant/engineDict`** :
+
+- les STL sont **découverts automatiquement** dans `constant/geometry/` par
+  balayage du répertoire (`findSurfaceFiles()` —
+  `src/preProcessing/findSurfaceFiles/findSurfaceFiles.H` : tout fichier lisible
+  par `meshedSurface::canRead()`, donc pas seulement des STL) ;
+- chaque patch est défini dans `engineDict` par un bloc `patches { <nom> { ... } }`
+  avec le mot-clé **`surfaces (nom_sans_extension ...)`** (regex autorisées) ;
+- le nom du bloc = nom du patch OpenFOAM final ; les STL listés deviennent ses faces ;
+- chaque bloc définit aussi `geometryMotion` (mouvement) et `meshControl`
+  (raffinement, couches limites).
+
+Le `snappyHexMeshDict` complet (avec le bloc `geometry` et les références STL)
+est **généré automatiquement** par l'utilitaire `engineMeshConfig` pour chaque
+instant de remaillage — c'est pour cela qu'on ne le trouve pas dans le cas.
+Seul `system/snappyHexMeshDict.cfg` (contrôles de qualité/snap/layers) est écrit
+à la main.
+
+## 3. Pipeline de maillage (Allmesh)
+
+```
+tar -xzf constant/geometry.tar.gz -C constant     (extraction des STL)
+predictRemeshInstants   → calcule les instants de remaillage (constant/meshTimes)
+moveSurfaces            → duplique et transforme les STL par instant
+                          vers constant/meshes/<t>/constant/geometry/
+engineMeshConfig        → écrit blockMeshDict + snappyHexMeshDict_main + meshQualityDict
+                          pour chaque instant dans constant/meshes/<t>/system/
+generateMesh -mesh <t>  → blockMesh + snappyHexMesh pour chaque instant
+                          → constant/meshes/<t>/polyMesh/
+```
+
+Pendant le calcul (`Allrun`) : le mover `multiValveEngine` déforme le maillage
+entre remaillages ; le topoChanger `meshToMesh` bascule sur le polyMesh suivant
+en interpolant tous les champs.
+
+## 4. Inventaire du cas tcc3 et correspondance des STL
+
+Préfixes : **PN** = piston, **LN** = liner, **HD** = culasse (head),
+**SP** = entretoise/spark plug, **IV** = intake valve, **EV** = exhaust valve,
+**IP** = intake port, **EP** = exhaust port.
+
+| STL | Pièce |
+|---|---|
+| `PN_Topland.stl` | Piston — couronne (translation vilebrequin-bielle) |
+| `PN_Crevice.stl` | Piston — creux périphérique (raffiné niv. 7) |
+| `LN_Wall.stl` | Chemise — scalingMotion (étirée avec le piston) |
+| `HD_Wall.stl` | Culasse — face chambre |
+| `SP_Wall.stl` | Bougie (paroi, raffinée niv. 4) |
+| `IV_Stem.stl` | Soupape admission — tige (valveMotion) |
+| `IV_Angle.stl` | Soupape admission — partie conique |
+| `IV_Bottom.stl`, `IV_Bottom_Side.stl` | Soupape admission — face inf. + flanc |
+| `IV_Seat.stl` | Soupape admission — portée sur la soupape |
+| `EV_*` (idem IV) | Soupape échappement |
+| `IP_Wall_Pipe.stl`, `IP_Plenum_*`, `IP_Pipe_Inlet.stl` | Conduit admission (parois) |
+| `IP_Inlet.stl` | Bride d'entrée admission (patch inlet) |
+| `IP_Seat_Top/Middle/Bottom.stl` | Siège admission dans la culasse — 3 bandes |
+| `EP_*` (idem IP) | Conduit échappement + siège (3 bandes) + bride outlet |
+| `supportSurfaces/*_ValveCut.stl` | Bouchons des volumes morts (voir §14) |
+
+Autres fichiers du cas :
+
+| Fichier | Rôle |
+|---|---|
+| `constant/engineDict` (`.coarse`/`.fine`) | Configuration centrale : patches, mouvements, raffinement |
+| `constant/engineData/*Lift.txt` | Lois de levée soupapes (CAD → lift) |
+| `constant/engineData/*Pressure.txt` | Pressions aux bornes (inlet/outlet) |
+| `constant/engineData/chamberPressure.txt` | Pression chambre **expérimentale** (validation) |
+| `constant/dynamicMeshDict` | Mover `multiValveEngine` + topoChanger `meshToMesh` |
+| `constant/zonesGenerator` | Zones pour initialisation zonale + mover (§11) |
+| `constant/momentumTransport` | Turbulence (k-ω SST) |
+| `0.orig/{p,T,U,k,omega,nut,alphat,tracer}` | Champs initiaux (groupes de CL, §5) |
+| `system/*` | Contrôles solveur + gabarits maillage |
+| `remeshInstants.py`, `plot_scripts/`, `plotData.gnu` | Post-traitement |
+
+## 5. Les 4 conditions aux limites
+
+Les CL ne sont pas des patches individuels mais des **groupes** (`inGroups`)
+déclarés dans `engineDict`, utilisés directement dans les champs `0.orig/*` :
+
+| Groupe | Patches (tcc3) | U | p | T |
+|---|---|---|---|---|
+| `staticWall` | défaut global : ports, liner, seats, culasse, bougie | `noSlip` | `zeroGradient` | `fixedValue` 310,66 K |
+| `movingWall` | `piston`, `iv_head`, `ev_head` | `movingWallVelocity` (vitesse locale auto) | `fixedFluxPressure` | = staticWall |
+| `inlet` | `inlet` (IP_Inlet) | `pressureInletOutletVelocity` | `uniformTotalPressure` (CSV `intakePressure.txt`, CAD) | `uniformInletOutlet` |
+| `outlet` | `outlet` (EP_Outlet) | = inlet | `uniformTotalPressure` (CSV `exhaustPressure.txt`) | `zeroGradient` |
+
+Construction en 3 étapes : STL → `inGroups` dans `engineDict` → `boundaryField`
+des champs. **Une seule CL déclarée pour N patches** : ajouter une paroi fixe
+n'exige aucun changement dans `0.orig` (héritage du groupe `staticWall`).
+
+Les `internalField` de `p`, `T`, `tracer` sont **zonaux** (chamber 18 bar/800 K,
+intakePort 0,945 bar/317 K, exhaustPort 1 bar/520 K) via les zones de §11.
+
+## 6. Paramètres cinématiques : où est quoi
+
+| Paramètre | Fichier | Entrée |
+|---|---|---|
+| Course, bielle | `constant/engineDict` | `patches/piston/geometryMotion/motion` (`crankConnectingRodMotion`, `stroke 0.086`, `conRodLength 0.231` — tcc3) |
+| Alésage | implicite | géométrie STL du liner |
+| Levées soupapes | CSV `engineData/*Lift.txt` | référencés dans `patches/i?_*/geometryMotion/motion` (admission en m, échappement en mm avec `scale 0.001`) |
+| Calage ouverture/fermeture | CSV de levée eux-mêmes | colonne d'angles (pas de mot-clé de phase, voir §8) |
+| Régime | `system/controlDict` | `userTime { type engine; rpm 800; }` — tout le cas est en CAD, le rpm ne fait que convertir CAD ↔ secondes |
+| Clarance morte PMH | `engineDict` | `remeshControl/clearance` (0,0095 m tcc3) |
+| Pressions aux bornes | CSV `engineData/*Pressure.txt` | `0.orig/p` |
+| Init par zone | `0.orig/{p,T}` | `internalField` zonal |
+
+`dynamicMeshDict` réutilise les valeurs d'`engineDict` par références croisées
+(`${engineDict!patches/piston/...}`) : **une seule source de vérité**.
+
+## 7. insidePoints : à quoi ça sert
+
+`engineDict/meshControl/insidePoints` = liste de points qui disent à snappyHexMesh
+**quel(s) volume(s) fluide mailler** (équivalent multi-volumes du `locationInMesh`).
+
+- tcc3 en a **3** : chambre + conduit admission + conduit échappement (les volumes
+  sont déconnectés quand les soupapes sont fermées ; un seul point ne suffirait pas).
+- Les points sont recopiés par `engineMeshConfig` dans le `snappyHexMeshDict_main`
+  **de chaque instant** → ils doivent rester dans le fluide pour toutes les positions
+  du piston (choisir des positions « sûres » : centre du cylindre à mi-course,
+  centre de chaque conduit).
+- Règle pour PIengine_v0 : un point par volume fluide déconnectable.
+
+## 8. Calage des soupapes : les CSV
+
+`valveMotion` n'accepte que `minLift`, `closureTolerance`, `dt` — **pas de
+mot-clé de phase/offset**. La variable d'entrée étant le CAD :
+
+> **Décaler le calage = décaler la colonne d'angles du CSV.**
+> Avancer l'ouverture de 10° → soustraire 10 à tous les angles.
+
+Idem pour les CSV de pression. Bonne pratique : générer les CSV par script
+paramétrique (IVO, IVC, EVO, EVC, lifts max) plutôt que les éditer à la main.
+
+Ce qui se recalcule automatiquement quand on change un calage :
+`constant/meshTimes` (par `predictRemeshInstants`, détection des ouvertures/
+fermetures), les instants de remaillage aux `forcedRemeshPositions` = `minLift`.
+
+## 9. Les dossiers polyMesh de constant/meshes
+
+Un `polyMesh` par instant de remaillage = un maillage complet pour la géométrie
+déformée à cet instant (piston/soupapes/liner aux positions exactes). Rôle :
+
+- entre deux remaillages : le maillage est **déformé** par le mover ;
+- au remaillage : le topoChanger `meshToMesh` **bascule** sur le polyMesh
+  pré-calculé suivant en **interpolant tous les champs** ;
+- `Allrun` décompose chaque polyMesh à l'avance (`decomposePar -mesh {}`) pour
+  un basculement parallèle instantané.
+
+Les instants sont calculés par `predictRemeshInstants` à partir des
+`remeshControl` de chaque pièce (tolérances piston, fermetures de soupapes aux
+`forcedRemeshPositions`, points morts `forcedRemeshInstants`).
+
+Conséquences : coût disque élevé (maillage × N domaines × N instants) ;
+après tout changement de géométrie/raffinement, **purger `constant/meshes/`**
+et relancer `Allmesh` (les anciens polyMesh deviennent incohérents).
+
+## 10. Paramètres à revoir lors d'un changement de géométrie
+
+Aucune recompilation nécessaire — tout est dictionnaires. Checklist :
+
+**Obligatoires (échec sinon)** :
+- `insidePoints` (positions des volumes fluides) ;
+- blocs `patches/surfaces (...)` (noms réels des STL) ;
+- `geometryMotion` par pièce mobile (axes, `initialPosition`, `minLift`) ;
+- `clearance` (clarance morte au PMH réelle) ;
+- `dynamicMeshDict` : `slidingPatches`, `linerPatches`, `frozenZones`/`movingZones` ;
+- `zonesGenerator` (zones cohérentes avec la nouvelle géométrie).
+
+**Recommandés** :
+- `cellSize` (échelle globale), `regionRefinement` (coordonnées codées pour tcc3) ;
+- `supportSurfaces` (ValveCut, voir §14) ;
+- `layerControl` ; tolérances `remeshControl` (fréquence des remaillages).
+
+**Procédure** : `surfaceCheck` sur chaque STL → adapter dicts → `Allclean` →
+`Allmesh` → **`checkMesh` sur `constant/meshes/0/polyMesh` avant la boucle
+complète** → ajuster → `Allrun`.
+
+## 11. zonesGenerator en détail
+
+`createZones` (OpenFOAM-14) lit `constant/zonesGenerator` et crée des zones sur
+le maillage initial. Trois consommateurs :
+
+1. **Initialisation zonale** des champs (`internalField zonal`) ;
+2. **Mover** `multiValveEngine` (`frozenZones`/`movingZones` de `dynamicMeshDict`) ;
+3. **Post-traitement** (moyennes par zone).
+
+Blocs du zonesGenerator tcc3 :
+
+| Zone | Type | Construction |
+|---|---|---|
+| `sparkPlug` | cellZone | cylindre analytique (axe bougie) |
+| `chamber` | cellZone | `union` (cylindre hérité d'`engineDict` via `$engineDict!...`, bougie) |
+| `exhaustPort` | cellZone | boîte |
+| `intakePort` | cellZone | **`difference`** : tout − (chambre + échappement + bougie) |
+| `cylinderHead` | pointZone | `cylinderHeadPoints`, `moveUpdate true` → `frozenZones` du mover (points ancrés) |
+| `pistonBowl` | pointZone | `pistonBowlPoints` enveloppe `periodic` ±40° PMH avec `deactivate` → `movingZones`, pour contrôler la déformation près du PMH |
+
+Techniques utiles à retenir : héritage `$engineDict!...` (une seule définition
+géométrique pour raffinement + zone), union/différence (pas besoin d'épouser les
+formes), périodicité temporelle (activation/désactivation par fenêtre CAD).
+
+## 12. Pourquoi 3 STL par siège (dans tcc3) et choix PIengine_v0
+
+Les 3 fichiers (`IP_Seat_Top/Middle/Bottom`) sont **3 tranches empilées d'un même
+cône de siège** (mesuré : tranches contiguës z = 0,0006→0,0034 m, rayon croissant
+0,014→0,0157, même axe) — pas des copies décalées. Objectif :
+
+1. **Graduer le raffinement** autour de la fente de levée : la fente annulaire
+   soupape/siège (quelques dixièmes de mm à l'ouverture) exige des cellules très
+   fines, mais seulement près d'elle ; 3 bandes de niveaux croissants font la
+   transition propre entre conduit grossier et orifice fin (snappy exige des
+   transitions progressives).
+2. Fournir une **cible propre** au `dynamicRefinement` (`numberOfCells 3`
+   à travers la fente, recalculé à chaque remaillage).
+
+**Choix PIengine_v0 : 1 seule tranche par siège** (simplicité CAO), avec un
+`surfaceRefinement` uniforme élevé. Le raffinement dynamique côté soupape
+(`IV*_Seat`, `dynamicRefinement`) continue de résoudre la fente. Revenir au
+découpage en 3 bandes en v1 si le maillage aux ouvertures s'avère trop coûteux.
+
+## 13. Position CAO des soupapes et initialPosition
+
+Mécanisme (`valveMotion.C`, hérité de `translationMotion.C:46`) :
+
+```
+déplacement(t) = lift(t) − initialPosition       // initialPosition défaut = 0
+```
+
+Le STL doit être dessiné **à la levée déclarée par `initialPosition`** (la
+valeur par défaut 0 s'applique si l'entrée est absente). Vérifié sur tcc3 :
+
+- **Admission** : CAO **fermée** (face plane affrontée au siège), pas
+  d'`initialPosition` → 0 par défaut ;
+- **Échappement** : CAO ouverte de **0,95 mm** (mesuré sur STL), déclarée
+  `initialPosition 9.5e-4`.
+
+Les CSV donnent `lift(0°) = 0` pour les deux soupapes : à l'instant 0,
+l'admission ne bouge pas (fermée), l'échappement est abaissée de 0,95 mm
+(déplacement = 0 − 0,00095) → **les deux sont fermées au maillage de t=0**,
+malgré des CAO de référence différentes. `initialPosition` n'est pas un réglage
+physique : c'est la **déclaration de ce que représente la CAO**.
+
+**Choix PIengine_v0 : 4 soupapes CAO en position fermée + `initialPosition 0`
+déclaré explicitement partout** (auto-documentation), piston au PMH.
+
+Pièges : CAO mi-levée inutile ; incohérence CAO/`initialPosition` = tout le
+cycle décalé d'autant.
+
+## 14. Les supportSurfaces (ValveCut)
+
+Rôle : quand une soupape est **fermée**, il existe un **volume mort** entre la
+tige et le guide de culasse (les guides ne sont pas modélisés en CAO). Le
+`ValveCut.stl` est une **surface-bouchon artificielle** (disque/tronc de cône
+posé juste au-dessus de la face de culasse, autour de la tige) sur laquelle le
+maillage s'arrête. Elle :
+
+- empêche snappy de mailler le volume mort inutile ;
+- garantit l'**étanchéité** chambre/conduit aux fermetures (sinon risque de
+  « fuite » topologique à travers la soupape fermée) ;
+- est déclarée dans `engineDict` (`supportSurfaces { ... type triSurface; file
+  "..."; }`), écrite dans le `snappyHexMeshDict_main` généré avec le `patchInfo`
+  du patch soupape, et **suit la soupape** (translatée avec elle par `moveSurfaces`).
+
+**PIengine_v0 : 4 ValveCut obligatoires** (un par soupape), fabriqués CAO
+soupape fermée : disque/anneau perpendiculaire à l'axe, rayon ≥ guide de soupape,
+juste au-dessus de la face de culasse (référence tcc3 : ils s'étendent ~0,5 à
+~4 mm au-dessus de la face).
+
+## 15. Ajouter des pièces / CL non conventionnelles (entretoise)
+
+Ajouter une **pièce fixe** (ex. entretoise bloc/culasse) est trivial : 1 STL +
+1 bloc dans `engineDict` (`surfaces`, `meshControl`, `inGroups` éventuel) —
+aucune recompilation, pas de changement dans `0.orig` si elle reste dans
+`staticWall`. Un `inGroups` dédié ne sert que pour une CL différente.
+
+Pour une CL « spécifique », du plus simple au plus fort : BC standard
+(`fixedValue`, `externalWallHeatFluxTemperature`...), moyennes par groupe,
+`fvConstraints`/`fvModels`, **`codedFixedValue`/`codedMixed`** (C++ dans le
+dictionnaire, sans recompiler AATE), nouvelle classe BC perso.
+
+Limites : nouvelles **cinématiques** = nouvelle classe `geometryMotion` en C++
+(3 types fournis : `translationMotion`, `scalingMotion`, `valveMotion`) ;
+pas de couplage fluide-structure natif. tcc3 contient d'ailleurs déjà une
+entretoise : `SP_Wall.stl` (patch `sparkplug`).
+
+## 16. Le cas imperialcollege (modèle minimal)
+
+Gabarit minimal AATE : **8 STL** (piston, liner, culasse, port, 3× soupape
+**statique**, outlet), 4 blocs de patches. Soupapes sans `geometryMotion`
+(banc d'essai), pas de supportSurfaces, pas de multi-instants de soupape.
+Utile comme point de départ pour une géométrie simple ou des tests rapides.
+
+## 17. Bilan des fichiers STL pour PIengine_v0
+
+**Conservés de tcc3 (3)** :
+
+| Fichier | Rôle |
+|---|---|
+| `PN_Topland.stl` | Piston — couronne (mobile) |
+| `PN_Crevice.stl` | Piston — crevice (mobile) |
+| `LN_Wall.stl` | Chemise (scaling) |
+
+**À fournir (33)** :
+
+| Catégorie | Fichiers | Détail |
+|---|---|---|
+| Culasse | `HD_Wall.stl` (1) | 4 puits de soupape, bougie en paroi plate intégrée (v0) |
+| Soupapes | 4 soupapes × 5 fichiers = **20** : `IV1/IV2/EV1/EV2` `_Stem`, `_Angle`, `_Seat`, `_Bottom`, `_Bottom_Side` | **CAO fermées**, `initialPosition 0` ; 5 fichiers comme tcc3 (raffinements distincts tige/face) |
+| Conduits admission | `IP_Inlet.stl`, `IP_Wall.stl`, `IP_Seat_1.stl`, `IP_Seat_2.stl` (**4**) | bride (patch inlet), mur **commun aux 2 soupapes**, 2 sièges à 1 tranche (paroi fixe) |
+| Conduits échappement | `EP_Outlet.stl`, `EP_Wall.stl`, `EP_Seat_1.stl`, `EP_Seat_2.stl` (**4**) | bride (patch outlet), mur commun, 2 sièges à 1 tranche |
+| ValveCut | `supportSurfaces/IV1/IV2/EV1/EV2_ValveCut.stl` (**4**) | bouchons des puits de tiges, CAO soupape fermée |
+
+**Total : 36 STL** (3 conservés + 33 à fournir).
+
+**Abandonnés/modifiés par rapport à tcc3** :
+
+- `IP_Seat_Top/Middle/Bottom` → `IP_Seat_1/2` (3 tranches → 1 tranche
+  par soupape, §12) ; idem `EP_Seat_*` ;
+- `IP_Wall_Pipe`, `IP_Plenum_*`, `IP_Pipe_Inlet` → un seul `IP_Wall.stl`
+  commun aux 2 soupapes d'admission ; idem côté échappement ;
+- `SP_Wall.stl` : paroi plate intégrée à `HD_Wall.stl` (bougie en v0) ;
+- renommage 2 → 4 soupapes : `IV_*` → `IV1_*`/`IV2_*`, `EV_*` → `EV1_*`/`EV2_*`.
+
+**Nomenclature** : préfixes soupape `IV1/IV2/EV1/EV2` ; les regex
+`"IV1_Seat.*"`, `"IP_Seat.*"` etc. dans `engineDict` matchent les fichiers.
+
+**Dictionnaires à adapter** (détaillé §10) : `engineDict` (+`.coarse`/`.fine`),
+`dynamicMeshDict` (bloc `valves` : 4 entrées), `engineData` (CSV de levée ×4,
+pressions), `zonesGenerator` (sans bougie, boîtes ports élargies), `Allmesh`
+(si géométrie livrée en clair au lieu du tar.gz).
+
+## 18. Modifications effectuées (journal)
+
+### 18.1 Correspondance fichiers réels ↔ rôles (noms déposés par l'utilisateur)
+
+Les 36 STL déposés utilisent la nomenclature `IV_1_*` (avec underscore) et
+`Steam` (au lieu de `Stem` — coquille conservée telle quelle dans les
+fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
+
+| Fichier réel | Rôle | Patch engineDict |
+|---|---|---|
+| `geometry/PN_Topland.stl`, `PN_Crevice.stl` | Piston (couronne, crevice) | `piston` (movingWall) |
+| `geometry/LN_Wall.stl` | Chemise | `liner` (scaling) |
+| `geometry/HD_Wall.stl` | Culasse plate (bougie non modélisée v0) | `cylinderhead` (staticWall) |
+| `geometry/IV_1_Steam.stl` … `IV_2_Steam.stl` | Tiges de soupapes admission | `iv1_stem`, `iv2_stem` |
+| `geometry/IV_?_{Angle,Bottom,Bottom_Side,Seat}.stl` | Têtes de soupapes admission | `iv1_head`, `iv2_head` (movingWall) |
+| `geometry/EV_?_{Steam,Angle,Bottom,Bottom_Side,Seat}.stl` | Soupapes échappement | `ev1_stem/ev1_head`, `ev2_stem/ev2_head` |
+| `geometry/IP_Wall.stl`, `IP_Seat_1.stl`, `IP_Seat_2.stl` | Conduit admission (mur commun + 2 sièges) | `intakePort` (staticWall) |
+| `geometry/IP_Inlet.stl` | Bride admission | `inlet` (groupe inlet) |
+| `geometry/EP_Wall.stl`, `EP_Seat_1.stl`, `EP_Seat_2.stl` | Conduit échappement | `exhaustPort` (staticWall) |
+| `geometry/EP_Outlet.stl` | Bride échappement | `outlet` (groupe outlet) |
+| `geometry/supportSurfaces/IV_?_Cut.stl`, `EV_?_Cut.stl` | Bouchons volumes morts | `supportSurfaces` des blocs `*_head` |
+
+### 18.2 Journal des modifications
+
+
+> Toute modification du cas doit être consignée ici : fichier modifié, nature
+> du changement, motif, date.
+
+| Date | Fichier(s) | Modification | Motif |
+|---|---|---|---|
+| 2026-10-22 | — | Copie intégrale de `tutorials/tcc3` → `tutorials/PIengine_v0` | Point de départ du nouveau cas |
+| 2026-10-22 | `README.md` | Création : documentation d'étude (ce fichier) | Traçabilité des choix et des questions |
+| 2026-10-22 | `README.md` (§1, §17) | Découpage CAO finalisé : soupapes à 5 fichiers, conduits à 4 fichiers (`Inlet/Outlet` + `Wall` commun + `Seat_1`/`Seat_2` à 1 tranche) — 36 STL au total | Choix utilisateur |
+| 2026-10-22 | `constant/geometry/`, `constant/geometry/supportSurfaces/` | Création des dossiers ; déplacement des 36 STL ; `*Cut*` → `supportSurfaces` ; suppression de `geometry.tar.gz` (géométrie tcc3 obsolète) | Rangement de la géométrie déposée à plat dans `constant/` |
+| 2026-10-22 | `Allmesh` | Suppression de la ligne `tar -xzf` (STL livrés en clair) | Adaptation au dépôt direct des STL |
+| 2026-10-22 | `constant/engineDict.coarse` | Réécriture complète, adaptée aux 4 soupapes et à la géométrie réelle (alésage R=0.05, culasse plate z=-0.005, soupapes CAO fermées) ; commentaires détaillés de chaque paramètre ; valeurs `TODO-USER` pour la cinématique | Configuration du nouveau moteur |
+| 2026-10-22 | `constant/engineDict.fine` | Généré depuis `.coarse` : `cellSize 0.008`, couches limites activées (`addLayers true`, `nSurfaceLayers 1`) | Variante maillage fin |
+| 2026-10-22 | `constant/dynamicMeshDict` | Bloc `valves` : 4 entrées (`intakeValve1/2`, `exhaustValve1/2`) ; `slidingPatches` regex `.*Steam.*` ; commentaires | Mover des 4 soupapes (références croisées engineDict) |
+| 2026-10-22 | `constant/zonesGenerator` | Sans `sparkPlug` ; `chamber` héritée d'engineDict ; boîte échappement adaptée aux mesures STL ; commentaires | Cohérence avec la nouvelle culasse |
+| 2026-10-22 | `README.md` | §18.1 table de correspondance noms réels ; §20 glossaire des paramètres | Documentation des dicts commentés |
+| 2026-10-22 | `constant/engineDict.{coarse,fine}` | Décisions utilisateur : course/bielle gardées (0,086/0,231 m), CAO piston = PMH, `clearance 0.017` (mesuré : 17 mm), `minLift` validé 0,5 mm | Données moteur fournies |
+| 2026-10-22 | `constant/engineData/` | Lois de levée : CSV de tcc3 conservés (déjà présents par la copie) — IV1=IV2 partagent `intakeLift.txt`, EV1=EV2 partagent `exhaustLift.txt` | Décision utilisateur |
+| 2026-10-22 | `0.orig/p` | Pressions aux bornes CONSTANTES (inlet 0,95 bar / outlet 1 bar, `uniformTotalPressure` sans table CSV) ; état initial estimé : 1 bar partout | Décision utilisateur |
+| 2026-10-22 | `0.orig/T` | État initial estimé (motored froid) : 300 K partout sauf échappement 350 K ; parois 300 K | Estimation à affiner |
+| 2026-10-22 | `system/controlDict` | `rpm 2500` | Décision utilisateur |
+| 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
+| 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
+| 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-04 | `engineDict.{coarse,fine}` | **Raffinement du fix L7** : à 136°, `numberOfCells 2` donnait encore L7 — le code utilise la levée BRUTE comme fente (0,4997 mm), et 2×0,25 = 0,5 > 0,4997 par 0,3 µm → raffinement continu → L7. Fix : `minLift 0.0005 → 0.0006` (4 soupapes) : l'ouverture se déclare à fente 0,6 mm où 2×0,25 = 0,5 ≤ 0,6 → L6 avec 20 % de marge ; fente géométrique réelle 0,7 mm (offset) ≈ 3 cellules. Les forcedRemeshPositions suivent automatiquement | Gap = levée brute, pas levée+offset |
+| 2026-11-04 | `engineDict.{coarse,fine}` | **Fenêtre de fuite 136–140° identifiée et corrigée** : bissection expérimentale utilisateur (135 OK / 136–140 fusionnés / 141 OK) = exactement la bande où `dynamicRefinement numberOfCells 3` impose du **L7** (0,125 mm — fente 0,5–0,72 mm < 3×0,25) ; à 139°+ la fente dépasse 0,75 mm → L6 → étanche. Le L7 « voit à travers » l'interstice marginal de la zone de siège ; L6 le scelle. **Fix : `numberOfCells 3 → 2`** (fente 0,6 mm à minLift → 2×0,25 ≤ 0,6 → L6 partout, plus aucun L7 du cycle). La fente à l'ouverture est résolue à 2 cellules au lieu de 3 (v0 acceptable) | Preuve expérimentale du mécanisme L7 (cf. §22.13) |
+| 2026-11-04 | STL EV (×10) + `engineDict.{coarse,fine}` | **Convention tcc3 étendue à l'échappement** (décision utilisateur) : pièces EV translatées de −0,1 mm, `initialPosition 0.0001` dans `ev1_stem`/`ev2_stem` — les **4 soupapes** sont désormais en CAO 0,1 mm sous la position fermée. À la fermeture : cônes écartés de 0,1 mm (sous-cellule → scellé par snap), plus aucune surface confondue ; à l'ouverture : la fente réelle grandit de 0,1 mm (0,6 mm à minLift) → dynamicRefinement vise L6 au lieu de L7. Garde-fous : minLift 0,5>0,1 ✓, clearance 0,005>>0,0001 ✓, isOpen indépendant ✓ | Décision utilisateur (convention tcc3 généralisée) |
+| 2026-11-04 | STL IV (×10) + `engineDict.{coarse,fine}` | **Convention tcc3 appliquée à l'admission** (décision utilisateur) : pièces IV translatées de **−0,1 mm** (CAO sous la position fermée), `initialPosition 0.0001` dans `iv1_stem`/`iv2_stem` → à lift=0, déplacement = −0,0001 : la soupape remonte de 0,1 mm → position fermée géométrique inchangée. Supprime la coïncidence exacte des cônes IV à la fermeture (gap CAO 0,1 mm < cellule L4 = scellé par snap). Sécurités vérifiées : minLift 0,5 > 0,1 ✓ ; clearance 0,005 >> 0,0001 (pas de piège §21.14) ✓ ; isOpen indépendant d'initialPosition ✓ | Décision utilisateur (convention tcc3 étendue à l'admission) |
+| 2026-11-04 | **Tous les STL** (révision CAO utilisateur) | **Nouvelle architecture du siège, façon tcc3** : plaque épaisse 0,4 mm (trous r=14,15) ; portées 45° (r 12→14) sur cônes de siège 45° (r 12,5→14,15) noyés dans l'épaisseur ; disques r=14,0 affleurant le plan bas de la plaque (fente radiale 0,15 mm de hauteur nulle à la fermeture) ; colliers r=14,5 ancrés À TRAVERS l'épaisseur (z −4,75→+0,25), restant encastrés jusqu'à ~4,8 mm de levée. Élimine toute fente constructive finie à la fermeture → le déclencheur du leak L7 disparaît. Piston/crevice/chemise inchangés (L6 valable). Vigilance : cônes portée/siège exactement confondus à la fermeture (cas dégénéré snappy — test, sinon presser de 0,05 mm) | Révision CAO après diagnostic « fuite 136 = fentes constructives résolues par L7 » (cf. §22.12) |
+| 2026-11-03 | `engineDict.{coarse,fine}` (v0+v1) | **Crash patchToPatch à 153,65° corrigé** : après 6 remaillages réussis (33,79→136,17 ✓ — le fix crevice tient !), crash au 7e sur `exhaustPort` (face à r=14,9 mm du siège EV, fente ~0,7–1 mm) : à la transition ouverte/fermée, la fente (sous-cellule à L3=2 mm) est scellée dans l'ancien maillage mais ouverte dans le nouveau → régions de patch non superposables. **Fix : `dynamicRefinement true; numberOfCells 3` réactivé sur les 4 sièges** (design tcc3 : 3 cellules à travers la fente à chaque remaillage) + sièges L4 — sûr désormais car la tempête de raffinement venait du bug scale EV, pas de ce mécanisme | 2e bug de géométrie marginale (cf. §22.11) |
+| 2026-11-03 | `PN_Crevice.stl` + `engineDict.{coarse,fine}` | **Décision utilisateur : garder le crevice → raffinement L6** (la réduction à 49,9 mm est ANNULÉE, anneau original r[49,50] restauré). Comparaison tcc3 : gap 0,3 mm @ L7 (0,125 mm) = 2,4 cellules à travers ; nous : gap 1 mm @ L5 = 2 cellules (marginal → fragmentation). Choix retenu : **L6 (0,25 mm) = 4 cellules à travers** — ratio meilleur que tcc3. Risques assumés : +cellules (~200 k dans l'anneau + coquilles de transition par instant), déformation mover des petites cellules entre remaillages | Décision utilisateur après comparaison tcc3 (cf. §22.10) |
+| 2026-11-03 | `PN_Crevice.stl` | **Crash meshToMesh à 33,79° diagnostiqué et corrigé** : le maillage de remaillage 33,79 avait **99 régions** (3 volumes sains + ~96 îlots) — l'anneau du crevice (gap 1 mm, marginal vs cellules 0,5–1 mm) s'y était fragmenté en slivers déconnectés, tuant le mapping (`cellsToCellsStabilisation`, cellule à r=49,04). Correctif v0 : **anneau réduit à r ∈ [48,9 ; 49,9]** (échelle radiale 0,998) → gap de 0,1 mm vers la chemise, systématiquement fermé par le snap à tous les instants → comportement déterministe, crevice exclu du domaine fluide en v0. V1 : gap ≥ 2 mm en CAO pour réintroduire le blow-by | Crash au 1er remaillage (cf. §22.9) |
+| 2026-11-03 | `README.md` | **§22 « Récit complet du débogage »** : trace chronologique de toute l'enquête (phases 0-5, hypothèses réfutées, errata, méthode de bissection, 6 leçons méthodologiques, état final + dette technique v0). Sommaire complété (20-22) | Traçabilité des recherches (demande utilisateur) |
+| 2026-11-03 | `engineDict.{coarse,fine}` | **VRAIE cause des ~9000 instants : `scale 0.001` MANQUANT sur les blocs EV** — exhaustLift.txt est en mm (max 8,89 mm) et tcc3 l'enveloppe de `scale 0.001` (mm→m) ; notre motion EV lisait la table en MÈTRES (levée 1000× trop grande). Preuves : racines forcedPos à 110,5° = angle où le CSV brut vaut 0,0005 (et non 0,5 mm) ; insensibilité aux correctifs initialPosition/clearance. Correctif : `scale 0.001` + `repeat` imbriqué, comme tcc3. Conséquence évitée de justesse : moveSurfaces aurait descendu les EV de 3 cm | Bug d'unités CSV (cf. §21.14ter) |
+| 2026-11-03 | `engineDict.{coarse,fine}` | **Erratum + vrai fix des 9023** : le revert EV n'a RIEN changé (résultat identique) — preuve que `patchRemesh` ne lit PAS `initialPosition` (il lit la table `motion` brute). Vraie cause : `clearance = minLift = 0,0005` dans les remeshControl des soupapes → seuil relatif = 0,35×(lift+0,5mm) ≈ 0,2–0,9 mm près de la fermeture → rafale à chaque degré des rampes (EVO 109°, etc.) ×4 soupapes ×2 événements = 9023. **Fix : `clearance 0.005`** (normalisateur ≈ levée max/2) dans les 4 blocs soupapes | Rafale du planning, 2e itération (cf. §21.14bis) |
+| 2026-11-03 | STL EV + `engineDict.{coarse,fine}` | **Bug 9023 remaillages corrigé** : le décalage EV (−1 mm + `initialPosition 0.001`, ajouté pendant la chasse à la fuite) annulait le dénominateur du critère relatif de remaillage (`relDisp = absDisp/(position + clearance)` avec `clearance = minLift = 0.0005` → dénominateur = `lift − 0.0005` → **zéro à lift = minLift**, la transition ouverte/fermée) → rafale d'instants à chaque pas (0,01°) pendant les rampes d'ouverture échappement (EVO ≈ 109°). Correctif : **décalage EV annulé** (STL +1 mm, `initialPosition 0` partout — CAO fermée comme l'admission) | Débordement du planning de remaillage (cf. §21.14) |
+| 2026-11-03 | bissection insidePoints | **RÉSOLU** : les 3 volumes maillent correctement ensemble avec le profil debug (raffinements réduits). Cause identifiée : le **sur-raffinement** (niveau 7 → cellules 0,125–6 µm) permettait aux cellules de pénétrer les interstices constructifs (fente 0,5 mm cône soupape/siège, jeu 0,4 mm bord de soupape/trou de culasse) qui, à maille normale, sont fermés par le snap → tout devenait connecté. **Profil v0 appliqué** : Crevice 5, sièges 3, distanceRefinement et dynamicRefinement désactivés (v0), insidePoints 3 points restaurés | Conclusion du débogage (cf. §21.13) |
+| 2026-11-03 | logs tcc3 debug + `engineDict.{coarse,fine}` | **Bilan du 1er maillage debug** : fuite PERSISTANTE prouvée par les logs (« Selected for keeping : 4016708/4091717 » = 98 % gardés ; patch background 3540 faces ; volume = 98,7 % du bloc) + **sur-raffinement massif** (4M cellules, niveau 7 dominant, min 6 µm — causé par PN_Crevice niv.7 + dynamicRefinement sur la fente siège 0,5 mm + shells). **Profil DEBUG appliqué** : Crevice 7→4, distanceRefinement off, dynamicRefinement off, sièges 4→2, têtes 4→3 ; bissection à venir via insidePoints (§21.13) | Diagnostic factuel par logs |
+| 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl`, `supportSurfaces/*_Cut.stl` | **ERRATUM / ANNULATIONS** : (1) la « fente des conduits » n'existait pas — les 88 arêtes de bord des murs à z=−0.003 sont toutes à r=12,5 des axes de soupape = **bord supérieur exact des sièges** (`IP_Seat` : cône r 12,5@−0.003 → 14,5@−0.005) qui réalisent la jonction mur→culasse (correction utilisateur) → jupe supprimée, murs restaurés ; (2) l'élévation des colliers Cut (+1 mm) a été ANNULÉE : leurs bords inférieurs se posent à l'origine pile sur les bords des trous de la culasse (r=14,5, z=−0.005) — l'élever créait une fuite de 1 mm | Erreurs d'analyse corrigées (cf. §21.12bis) |
+| 2026-11-03 | `IP_Wall.stl`, `EP_Wall.stl` | **FUITE PRINCIPALE CORRIGÉE** : les murs de conduits s'arrêtaient à z=−0.003, laissant une **fente ouverte de 2 mm** entre leur fond et le plan de culasse (z=−0.005) — 88 arêtes de bord par mur à z=−0.003 (ouverture 65×25 mm). Cette fente reliait les conduits admission↔échappement↔extérieur au-dessus de la plaque → tout le domaine connecté à l'extérieur → snappy ne supprimait rien. Correctif : jupes verticales de 2 mm générées par script sur chaque arête du bord inférieur (176 tris/mur), murs désormais posés sur la culasse (z=−0.005) | Symptôme « cellules extérieures non supprimées » (cf. §21.12) |
+| 2026-11-03 | STL + `engineDict.{coarse,fine}` | **Soupapes échappement décalées** : pièces EV_1/EV_2 (Steam, Angle, Seat, Bottom, Bottom_Side) translatées de **−1 mm** en z (CAO = 1 mm sous la position fermée, style tcc3 EV 9.5e-4) ; `initialPosition 0.001` dans `ev1_stem`/`ev2_stem` (à t=0, EV remonte de 1 mm → fermée). `*_Cut` translatés **+1 mm** (décoplanarisation plan culasse) — les collaires restent ancrés à la culasse, comme tcc3 | Symptôme persistant « cellules extérieures non supprimées » (cf. §21.11) |
+| 2026-11-03 | `Allmesh` | **Mode débogage** : `DEBUG_MESH=1 ./Allmesh` = un seul maillage à l'instant 0 (saute predictRemeshInstants, écrit 0 dans meshTimes) | Débogage géométrie/maillage (cf. §21.10) |
+| 2026-11-03 | `constant/geometry/supportSurfaces/*_Cut.stl` | Nouveaux ValveCut validés : colliers cylindriques r=14,5 mm, z[-0.005,0], enjambant sièges et traversant les parois (2 mm de pénétration) — conforme au design tcc3 ✓ | Correction CAO utilisateur |
+| 2026-11-03 | `Allmesh` | `generateMesh` introuvable via PATH (script du dépôt, pas un utilitaire OpenFOAM) → Allmesh le localise désormais via `../../bin/generateMesh` avec repli sur le PATH | Erreur "generateMesh: not found" au premier maillage (cf. §21.8) |
+| 2026-11-03 | `constant/geometry/` + `.gitignore` | **Incident corrigé** : les 36 STL avaient disparu du dépôt (le `.gitignore` global contient `*.stl` ; le `git add` d'un déplacement les a silencieusement exclus et enregistré leur suppression). Restaurés avec `git add -f` + exceptions `!tutorials/PIengine_v0/constant/geometry/**` dans `.gitignore` | Piège git (§21.7) |
+| 2026-11-03 | `engineDict.{coarse,fine}` | **Bugfix** : références d'héritage relatives corrigées — `$../piston/...`, `$../../iv1_stem/...`, `$../../ev1_stem/...` → `$../../../...` (il faut 3 niveaux depuis un bloc `motion` : motion→geometryMotion→patch→patches) ; détecté par le FATAL IO ERROR ligne 216 au premier Allmesh | Erreur de syntaxe dict (cf. §21.6) |
+
+## 19. TODO avant premier maillage
+
+- [x] Recevoir et vérifier les STL (réceptionnés, bounding-boxes mesurées ; `surfaceCheck` complet à faire côté OpenFOAM)
+- [x] Adapter `engineDict.coarse` (et `.fine`) — 4 soupapes, insidePoints, raffinements
+- [x] Adapter `dynamicMeshDict` (4 valves, slidingPatches regex)
+- [x] Adapter `zonesGenerator` (chambre, ports, cylinderHead/pistonBowl)
+- [x] CSV `engineData` : levées tcc3 conservées ; pressions passées en constantes dans `0.orig/p`
+- [ ] Mettre à jour `Allmesh` si la géométrie n'est plus livrée en tar.gz
+- [ ] `./Allclean && ./Allmesh`
+- [ ] `checkMesh` sur `constant/meshes/0/polyMesh` **avant** la boucle complète
+- [ ] Ajuster `cellSize`/raffinements si nécessaire, répéter
+- [ ] `./Allrun`
+
+## 20. Glossaire des paramètres des dictionnaires (réponses aux questions)
+
+Chaque paramètre ci-dessous est commenté en place dans les dictionnaires.
+Ce glossaire sert de référence rapide.
+
+### engineDict (patches/*/geometryMotion)
+
+| Paramètre | Sens | Où le trouver / comment le fournir |
+|---|---|---|
+| `axis (0 0 1)` | Axe du mouvement (moteur ou soupape) | Vertical ici ; l'adapter si soupapes inclinées |
+| `initialPosition` | Position de référence de la CAO (levée pour une soupape, hauteur pour le piston). `déplacement(t) = valeur(t) − initialPosition` ; défaut = 0 | CAO PIengine_v0 : soupapes FERMÉES et piston à sa position CAO → 0 partout (vérifier la position piston, voir question Q1) |
+| `minLift` | Levée minimale de soupape : la soupape n'est jamais totalement au contact dans le maillage ; déclenche les remaillages d'ouverture/fermeture (`forcedRemeshPositions`) | Choix maillage (tcc3 : 0,5 mm) ; doit être ≥ clarance CAO fermée |
+| `motion { type crankConnectingRodMotion; conRodLength; stroke; }` | Cinématique piston : longueur de bielle et course en m | **Données moteur à fournir (TODO-USER)** |
+| `motion { type repeat; period 720; value { type table; file ...; } }` | Loi de levée : table CSV CAD → lift, répétée chaque cycle | CSV dans `constant/engineData/` (TODO-USER : lois propres à PIengine) |
+| `remeshControl { absTolerance; relTolerance; forcedRemeshPositions; clearance; }` | Quand remailler : tolérances sur le déplacement depuis le dernier maillage ; instants forcés aux fermetures ; clarance morte au PMH | Tolérances transposables de tcc3 ; `clearance` = donnée moteur (TODO-USER) |
+
+### engineDict (meshControl)
+
+| Paramètre | Sens | Où le trouver |
+|---|---|---|
+| `cellSize` | Taille de base du maillage (avant raffinements, chaque niveau divisant par 2) | ~alésage/6 en grossier |
+| `insidePoints ((x y z) ...)` | UN POINT PAR VOLUME FLUIDE ; doit rester dans le fluide à tous les instants | Centre chambre + centre de chaque conduit (vérifier après course connue) |
+| `surfaceRefinement N` | Niveau de raffinement d'une surface (2^N division) | Sièges/fentes > parois > conduits |
+| `distanceRefinement ((d1 l1) (d2 l2))` | Raffinement par distance à la surface (bandes concentriques) | Pour la chemise et la fente de levée |
+| `dynamicRefinement true; numberOfCells 3;` | À chaque remaillage, taille recalculée pour poser N cellules à travers la fente soupape-siège | Sur les `*_Seat` des soupapes |
+| `regionRefinement { type cylinder; point1; point2; radius; level; }` | Raffinement volumique analytique (cylindre, cône tronqué...) ; fenêtres `begin/end/repeat` pour activation par CAD | Zone chambre héritée par zonesGenerator |
+| `layerControl` | Couches limites (prismes) : nombre, épaisseurs, expansion | Off en v0 coarse, on en fine |
+
+### engineDict (patches/*/meshControl/patchInfo)
+
+| Paramètre | Sens |
+|---|---|
+| `inGroups staticWall;` | Paroi fixe (noSlip) — défaut global si non listé |
+| `inGroups movingWall;` | Paroi mobile (movingWallVelocity : vitesse locale auto) |
+| `patchType patch; inGroups inlet/outlet;` | Vraie frontière : conditions inlet/outlet des 0.orig |
+
+### dynamicMeshDict
+
+| Paramètre | Sens |
+|---|---|
+| `slidingPatches` | Patches où le maillage glisse (chemise, tiges) — regex sur les noms DE FICHIERS (`.*Steam.*` ici) |
+| `frozenZones` / `movingZones` | PointZones ancrées (cylasse) / suivant le piston (pistonBowl), définies dans zonesGenerator |
+| `${engineDict!...}` | Référence croisée : valeur lue dans engineDict (source unique) |
+| `topoChanger { times; repeat; timeDelta; }` | Instants de remaillage (meshTimes), périodicité du cycle, tolérance d'appariement |
+
+### zonesGenerator
+
+| Paramètre | Sens |
+|---|---|
+| `zoneType cell;` | Sélectionne des cellules (cellZone) — pour initialisation zonale et post-traitement |
+| `type cylinder/box; point1/point2/radius/box` | Formes analytiques ; coordonnées mesurées sur les STL PIengine_v0 |
+| `type union/difference` | Combinaisons booléennes de zones (ordre de déclaration important) |
+| `$engineDict!...` | Héritage d'une définition d'engineDict (raffinement ↔ zone cohérents) |
+| `cylinderHeadPoints` / `pistonBowlPoints` | PointZones du mover (frozen/moving) recalculées après remaillage (`moveUpdate`) |
+| `periodic { begin; end; deactivate; repeat; }` | Activation de la zone pistonBowl dans une fenêtre CAD autour du PMH |
+
+## 21. Notes de validation et remarques importantes
+
+### 21.1 Rôle exact de `clearance` (≠ position du piston)
+
+La position du piston vient uniquement de la cinématique
+(`stroke`/`conRodLength`/`initialPosition`). `clearance` **ne positionne rien** :
+il est utilisé uniquement par `predictRemeshInstants`
+(`applications/utilities/predictRemeshInstants/remesh/patchRemesh.C:80`) : le
+déplacement relatif du piston est normalisé par `(déplacement précédent +
+clearance)`. Sans cela, près du PMH (chambre minuscule), un petit déplacement
+absolu représenterait un changement relatif énorme et forcerait des remaillages
+à chaque pas. Valeur PIengine_v0 : **0,017 m** (mesuré CAO au PMH : couronne
+z = −0,022, culasse z = −0,005).
+
+### 21.2 Convention de hauteur de la chemise (scalingMotion)
+
+La CAO de la chemise représente sa position **la plus courte (PMH)** ; le mover
+`scalingMotion` l'**étire** (facteur > 1) à mesure que le piston descend, pour
+qu'elle couvre toujours culasse → piston. Vérifié sur tcc3 : sa chemise fait
+exactement sa clarance PMH (9,5 mm). PIengine_v0 : chemise 20 mm au PMH
+(17 mm de chambre + 3 mmm dans la zone crevice) → **conforme à la convention**.
+NE PAS modéliser la chemise « haute au PMB » : elle serait comprimée au PMH.
+
+### 21.3 `insidePoints` — position retenue et raisonnement
+
+Un point par volume fluide déconnectable, TOUJOURS dans le fluide (les points
+sont recopiés dans le snappyHexMeshDict de chaque instant) :
+
+| Volume | Point | Justification |
+|---|---|---|
+| Chambre | `(0 0 -0.013)` | 8 mm sous la culasse, 9 mm au-dessus de la couronne au PMH ; la chambre ne fait que grandir ensuite (le seul point dépendant du piston) |
+| IntakePort | `(0 -0.045 0.03)` | zone large du conduit, mi-hauteur, loin des puits de soupapes ; conduit immobile → toujours valide |
+| ExhaustPort | `(0 0.045 0.03)` | idem côté échappement |
+
+⚠️ Première version `(±0.031 0.02)` : écartée car trop proche de la bande des
+sièges (y ∈ [±0.0345, ±0.0055]) — si un rib central sépare les deux puits dans
+le port, le point serait dans le solide. À **valider au premier Allmesh**
+(snappy garde le volume contenant chaque point ; vérifier que chamber + ports
+sont bien les 3 volumes attendus).
+
+### 21.4 Affrontement soupape/siège à la fermeture — point d'attention CAO
+
+Mesure CAO (soupapes fermées) : faces `IV/EV_?_Bottom` à z = −0,0059 ; plan des
+sièges (`IP/EP_Seat_?`) à z ∈ [−0,0050, −0,0030] → la face de soupape **pénètre
+de 0,9 mm sous le plan d'appui du siège**. Interprétations possibles :
+
+- soit la position CAO fermée correspond effectivement à un léger enfoncement
+  (certaines CAO coupent la soupape au plan du siège) : acceptable, le maillage
+  « voit » une soupape affrontée, mais **à vérifier en CAO** ;
+- soit c'est une interférence à corriger (remonter la soupape de 0,9 mm ou
+  ajuster `initialPosition` — cf. §13 : `déplacement(t) = lift(t) −
+  initialPosition`).
+
+Si correction choisie via `initialPosition` : mettre `initialPosition 0.0009`
+(déclarer « CAO = levée 0,9 mm ») — le reste suit automatiquement.
+
+### 21.5 Divers
+
+- Coquille de nomenclature conservée : `Steam` au lieu de `Stem` (fichiers et
+  dicts cohérents entre eux, regex du mover `.*Steam.*`).
+- Les CSV `intakePressure.txt`/`exhaustPressure.txt` ne sont plus référencés
+  (pressions constantes dans `0.orig/p`) mais restés dans `engineData/` pour
+  un éventuel retour aux tables.
+- `chamberPressure.txt` (donnée expérimentale tcc3) : **inutilisable pour
+  PIengine_v0** (moteur différent) — à remplacer par des essais ou à supprimer
+  des scripts de comparaison (`plot_scripts/chamberPressure.py`).
+| (à venir) | `constant/engineDict` | Passage à 4 soupapes (blocs `iv2_*`, `ev2_*`, sièges à 1 tranche, `sparkplug` supprimé, conduits à 4 fichiers) | Adaptation à la nouvelle géométrie |
+| (à venir) | `constant/dynamicMeshDict` | Bloc `valves` : `intakeValve2`, `exhaustValve2` | Mover des 2 nouvelles soupapes |
+| (à venir) | `constant/engineData/` | CSV de levée ×4 + pressions | Lois propres à PIengine_v0 |
+| (à venir) | `constant/zonesGenerator` | Sans `sparkPlug`, ports adaptés | Cohérence avec la nouvelle culasse |
+| (à venir) | `constant/geometry/` | Remplacement des STL (§17) | Nouvelle CAO 4 soupapes |
+
+### 21.6 Piège de syntaxe : références d'héritage relatives (`$../...`)
+
+Le nombre de `../` se compte depuis le bloc **où vit la référence**, pas depuis
+le bloc qu'on écrit. Depuis l'intérieur d'un bloc `motion`
+(`patches/<p>/geometryMotion/motion`), il faut **3** niveaux pour remonter à
+`patches` :
+
+```
+motion { $../../../piston/geometryMotion/motion; }   // correct
+motion { $../piston/geometryMotion/motion; }         // FATAL IO ERROR
+```
+
+Règle : écrire la référence, puis compter les accolades ouvertes entre le bloc
+courant et `patches`. Les références absolues (`${engineDict!...}` dans
+dynamicMeshDict) ne sont pas soumises à ce piège.
+
+### 21.7 Piège git : le `.gitignore` exclut `*.stl`
+
+Le `.gitignore` du dépôt OpenFOAM contient `*.stl` (c'est pourquoi tcc3 livre
+sa géométrie en `geometry.tar.gz`). Conséquences :
+
+- un `git add` de STL est **silencieusement ignoré** (aucun message) ;
+- un upload via l'interface web GitHub, lui, les ajoute ;
+- déplacer des STL suivis par git vers un chemin ignoré = commit de suppression.
+
+Correctifs appliqués :
+1. exceptions dans `.gitignore` :
+   `!tutorials/PIengine_v0/constant/geometry/*.stl` et
+   `!tutorials/PIengine_v0/constant/geometry/supportSurfaces/*.stl` ;
+2. réintégration forcée (`git add -f`), commit 72a61b9.
+
+Règle : après toute manipulation de fichiers STL dans le dépôt, vérifier avec
+`git ls-files tutorials/PIengine_v0/constant/geometry | wc -l` (attendu : 36).
+
+### 21.8 `generateMesh` : script du dépôt, pas un utilitaire OpenFOAM
+
+`generateMesh` vit dans `bin/` du dépôt (il lance blockMesh+snappyHexMesh,
+localement ou via SGE/SLURM). Il n'est PAS installé par OpenFOAM : si `bin/`
+n'est pas dans le PATH, Allmesh échoue avec « generateMesh: not found ».
+
+Correctifs :
+- immédiat : `export PATH="$PATH:<repo>/bin"`, puis relancer la boucle à la main ;
+- durable (appliqué dans Allmesh) : le script cherche
+  `$(dirname $0)/../../bin/generateMesh` et retombe sur le PATH.
+
+Vérification : `which generateMesh` doit rendre un chemin avant de lancer.
+
+### 21.9 Erratum : le HD_Wall n'a jamais eu de trou central
+
+L'analyse raster du §précédent avait été mal interprétée : les 4 vides visibles
+sont les puits de soupapes, le centre (0,0) est couvert. Preuve arithmétique :
+aire des triangles (0,006862 m²) = aire du disque r=0,055 (0,009503) −
+4 × π × 0,0145² (0,002642) — aucun 5ᵉ trou. Le rayon minimal des sommets
+(0,0138 m) est le bord interne des puits (centre à 28,3 mm, rayon 14,5 mm),
+pas le rayon d'un trou central. Leçon : valider une « fuite » par le calcul
+d'aire avant de conclure.
+
+### 21.10 Mode débogage d'Allmesh (maillage unique)
+
+`DEBUG_MESH=1 ./Allmesh` :
+- saute `predictRemeshInstants` et écrit `0` dans `constant/meshTimes` ;
+- `moveSurfaces`/`engineMeshConfig` traitent uniquement l'instant 0 (les temps
+  venant de `meshTimes` via l'include d'`engineDict`) ;
+- la boucle génère un seul maillage : `constant/meshes/0/polyMesh` ;
+- contrôles : `checkMesh constant/meshes/0/polyMesh` + ParaView (vérifier que
+  seuls chambre + conduits sont maillés, que l'extérieur est supprimé).
+
+Sortie du mode : `./Allclean` puis `./Allmesh` normal. Les utilitaires
+`moveSurfaces`/`engineMeshConfig` acceptent aussi `-times "(0)"` manuellement.
+
+### 21.11 Décalage des soupapes d'échappement (style tcc3)
+
+Pour reproduire la convention tcc3 (EV : CAO 0,95 mm sous la fermée,
+`initialPosition 9.5e-4`), les pièces des soupapes d'échappement ont été
+translatées de −1 mm en z dans les STL, et `initialPosition 0.001` déclaré
+dans `ev1_stem`/`ev2_stem` :
+
+```
+déplacement(t) = lift(t) − 0.001
+```
+
+À t=0 : lift=0 → déplacement = −0,001 → la soupape REMONTE de 1 mm dans
+`moveSurfaces` → position fermée. Le maillage de t=0 est inchangé ; seule la
+position de RÉFÉRENCE CAO diffère (comme tcc3). Les admissions restent
+fermées en CAO (`initialPosition 0`).
+
+Commandes équivalentes OpenFOAM-14 (syntaxe : transformation = argument
+positionnel, PAS une option) :
+
+```bash
+surfaceTransformPoints "translate=(0 0 -0.001)" EV_1_Bottom.stl out.stl
+```
+
+NOTE : les collaires `*_Cut` ne suivent PAS les soupapes vers le bas — ils
+restent positionnés par rapport à la culasse (tcc3 : ses deux collaires à la
+même hauteur au-dessus du plan de culasse alors que sa CAO EV est décalée).
+
+### 21.12 La fente des conduits : la vraie cause du « cellules extérieures »
+
+Diagnostic par les **arêtes de bord** (edges appartenant à 1 seul triangle) :
+IP_Wall et EP_Wall avaient chacun 88 arêtes de bord à z = −0,003 — le fond
+des conduits était **ouvert**, 2 mm au-dessus du plan de culasse (−0,005).
+Rien n'occupant l'espace z ∈ [−0,005 ; −0,003] (hors anneaux de siège), cette
+fente reliait : conduit admission ↔ zone morte au-dessus de la plaque ↔
+conduit échappement ↔ extérieur (au-delà du bord de la plaque, r > 0,055).
+Tous les volumes étant connectés à l'extérieur, snappyHexMesh gardait tout.
+
+Correctif : extrusion verticale (jupe) de chaque arête du bord inférieur
+jusqu'au plan de culasse (script Python, 176 triangles par mur). Le bord des
+murs est désormais posé sur la plaque (z = −0,005), comme le haut de la
+chemise. Règle générale : **toute pièce doit finir SUR une autre pièce**,
+jamais en laissant un intervalle. (Les brides d'entrée/sortie et les trous
+de tiges du plafond des conduits sont, eux, conformes au design tcc3.)
+
+### 21.12bis Erratum : sièges = pièces de jonction ; colliers posés sur la culasse
+
+Deux corrections d'analyse (mesures, correction utilisateur) :
+
+1. **Les murs de conduits n'ont jamais eu de fente ouverte** : leurs 88 arêtes
+   de bord à z=−0.003 sont toutes à r=12,5 mm des axes de soupape — elles
+   s'affrontent **exactement** au bord supérieur des anneaux de siège
+   (`IP/EP_Seat_*` : cône de r 12,5 à z=−0.003 vers r 14,5 à z=−0.005).
+   Les sièges sont les **pièces de jonction** mur → plan de culasse. La jupe
+   ajoutée à tord (§21.12) a été supprimée, murs restaurés à l'identique.
+2. **Les colliers ValveCut étaient correctement posés à l'origine** : leur
+   bord inférieur (r=14,5, z=−0.005) coïncide avec les bords des trous de
+   culasse. L'élévation de +1 mm (analogie tcc3) a été **annulée** : elle
+   ouvrait une fuite de 1 mm. Notre culasse étant de épaisseur nulle
+   (plaque à z=−0.005), le design tcc3 (colliers surélevés au-dessus d'une
+   culasse épaisse) ne transposait pas.
+
+Leçon : chaque « fuite » doit être validée par affrontement mesuré
+(arêtes mises en regard des bords des pièces voisines) avant correction.
+
+### 21.13 Bissection de la fuite par insidePoints (méthode)
+
+Le log snappy du 1er maillage prouve : (1) fuite — 98 % du bloc gardé, patch
+`background` (frontière du bloc) = 3540 faces, 3 régions dont une énorme
+contenant tous les points ; (2) sur-raffinement — 4M cellules (niveau 7
+dominant, min 6 µm) causé par PN_Crevice niv.7 + `dynamicRefinement
+numberOfCells 3` sur la fente de 0,5 mm cône-soupape/cône-siège + shells.
+
+Méthode de localisation (runs DEBUG_MESH=1, quelques minutes chacun avec le
+profil debug) :
+
+```
+insidePoints ((0 0 -0.013));                          # run A : chambre seule
+insidePoints ((0 -0.045 0.03));                       # run B : admission seule
+insidePoints ((0 0.045 0.03));                        # run C : échappement seul
+```
+
+Verdict par run : si le maillage ne contient QUE le volume attendu (patch
+`background` ≈ 0 face dans checkMesh) → sous-système étanche ; sinon → la
+fuite est dans ce sous-système (rechercher alors où le maillage touche le
+patch background, visible en ParaView). Une fois le sous-système coupable
+identifié, inspecter ses joints (mesures d'arêtes de bord) et corriger la
+CAO. Restaurer ensuite les raffinements normaux.
+
+### 21.13bis Conclusion du débogage maillage (v0)
+
+La bissection (runs A/B/C puis run complet au profil debug) a montré que les
+3 volumes maillent proprement ensemble dès que le raffinement est modéré.
+Cause racine du « 98 % du bloc gardé » : sur-raffinement (Crevice niv.7 +
+dynamicRefinement numberOfCells 3) produisant des cellules de 0,125 mm à 6 µm,
+capables de pénétrer les interstices constructifs de la CAO (fente 0,5 mm
+entre cônes soupape/siège ; jeu 0,4 mm entre bord de soupape et trou de
+culasse) — à maille ≥1 mm, le snap ferme ces interstices ; plus fins, ils
+deviennent de vrais passages reliant chambre ↔ conduits ↔ extérieur.
+
+Profil v0 retenu : PN_Crevice 5, sièges 3, têtes 3, distanceRefinement OFF,
+dynamicRefinement OFF (à réactiver en v1 avec numberOfCells 2 max, après
+vérification), insidePoints 3 points. ATTENTION pour les instants suivants :
+au minLift (0,5 mm), la fente réelle doit rester ≥ taille de cellule locale
+pour éviter la reconnexion — même vigilance si raffinement accru.
+
+### 21.14 Piège : initialPosition > clearance annule le critère relatif
+
+`patchRemesh.C:80` : `relDisp = absDisp/max(position + clearance, small)`.
+Pour une soupape : `position = lift − initialPosition` et `clearance = minLift`.
+Si `initialPosition > minLift` (ex-EV : 0.001 > 0.0005), le dénominateur
+`lift − initialPosition + minLift` s'annule à `lift = initialPosition − minLift`
+— qui peut tomber exactement sur la transition ouverte/fermée. Résultat :
+relDisp → ∞ et un remaillage déclenché à CHAQUE pas de balayage (0,01°)
+pendant toute la traversée de la bande critique → des milliers d'instants
+(9023 observés).
+
+Règle : soit `initialPosition 0` (CAO fermée — choix PIengine_v0), soit
+s'assurer `clearance > initialPosition` dans le remeshControl. tcc3 est
+limite (0.00095 vs 0.0005) mais sa table de levée ne s'attarde pas dans la
+bande critique ; notre configuration avec tables partagées y est restée.
+
+### 21.14bis Erratum 9023 : le normalisateur `clearance`, pas `initialPosition`
+
+Test décisif : le revert EV (initialPosition 0.001→0) n'a strictement rien
+changé au planning (9023 identiques). `patchRemesh` ne lit pas
+`initialPosition` : il évalue la table `motion` (levée brute). Le déclencheur
+de la rafale était donc le **normalisateur** : `clearance = minLift = 0,0005`
+→ seuil relatif `0.35×(lift + 0.0005)` ≈ 0,2–0,9 mm de levée près de la
+fermeture → déclenchements multiples par degré sur les rampes de came
+(8 événements soupapes par cycle) → 9023 instants.
+
+Fix : `clearance 0.005` dans les 4 remeshControl soupapes (≈ la moitié de la
+levée max). Le critère devient : remailler quand la levée a bougé de
+max(1,5 mm ; 0,35×(lift+5 mm)) → quelques instants par rampe. Le revert EV
+est conservé (simplification : CAO fermée partout, initialPosition 0).
+
+### 21.14ter LA cause des ~9000 instants : unités du CSV échappement
+
+exhaustLift.txt est en **millimètres** (max 8,89 mm) ; tcc3 l'enveloppe :
+
+```
+motion { type scale; scale 0.001;          // mm -> m
+         value { type repeat; period 720; value { type table; ... } } }
+```
+
+Notre engineDict EV avait omis le `scale` -> la levée échappement valait jusqu'à
+8,89 MÈTRES. Signatures : racines forcedPos trouvées là où le CSV BRUT vaut
+0,0005 (≈110,5°) au lieu de 0,5 mm (≈133°) ; planning insensible aux
+correctifs initialPosition/clearance (levée aberrante dominante) ;
+moveSurfaces aurait descendu les soupapes de centimètres aux instants > 119°.
+
+Leçons : (1) toujours vérifier les UNITÉS des CSV (en-tête `#CAD;mm` vs
+`#CAD;m`) avant de référencer une table ; (2) un planning d'instants
+démesuré doit faire suspecter une échelle de mouvement erronée ; (3) comparer
+un paramétrage à son modèle (tcc3) champ par champ, y compris les
+enveloppes Function1 (scale/repeat).
+
+## 22. Récit complet du débogage (trace des recherches)
+
+> Cette section retrace chronologiquement l'ensemble de l'enquête menée pour
+> rendre PIengine_v0 maillable : chaque hypothèse, chaque test, chaque erreur
+> (y compris les nôtres), et la leçon qui en découle. Les détails techniques
+> sont dans les sections §21.x ; ici, c'est la logique de recherche qui est
+> conservée — précieuse pour un futur débogage, ou pour quiconque adaptera
+> une nouvelle géométrie au framework AATE.
+
+### 22.1 Phase 0 — Apprentissage du framework (avant géométrie)
+
+Étude du code source d'AATE (`engineMeshConfig`, `moveSurfaces`,
+`predictRemeshInstants`, `patchRemesh`, `findSurfaceFiles`) pour comprendre :
+la découverte automatique des STL (`constant/geometry/`), le dictionnaire
+central `engineDict` (`surfaces`, `geometryMotion`, `meshControl`), les
+groupes de CL, le pipeline de maillage, la stratégie multi-maillages
+(meshToMesh). Comparaison permanente avec les deux tutoriels (tcc3, complet ;
+imperialcollege, minimal). **Leçon : le `snappyHexMeshDict` n'existe pas dans
+le cas — il est généré ; tout passe par `engineDict`.**
+
+### 22.2 Phase 1 — Conception et intégration de la géométrie 4 soupapes
+
+- Décisions CAO : 5 STL/soupape (comme tcc3), sièges à 1 tranche, conduits à
+  4 fichiers (mur commun + bride + 2 sièges), bougie en paroi plate,
+  soupapes CAO fermées, ValveCut par soupape ;
+- vérification des STL déposés (parseur Python : bounding boxes, watertightness
+  par arêtes, affrontements mesurés) ;
+- rédaction des dictionnaires commentés (engineDict, dynamicMeshDict,
+  zonesGenerator) + décisions utilisateur (course/bielle tcc3 conservées,
+  PMH, pressions constantes, rpm 2500, état initial estimé).
+
+### 22.3 Phase 2 — Premiers échecs de la chaîne Allmesh (3 bugs d'intégration)
+
+1. **`generateMesh: not found`** → script du dépôt (`bin/`), pas un
+   utilitaire OpenFOAM ; fix : Allmesh le localise relativement (§21.8) ;
+2. **références d'héritage `$../...`** mal comptées → FATAL IO ERROR ligne
+   216 ; fix : `../../../` depuis un bloc `motion` (§21.6) ;
+3. **STL perdus du dépôt** : le `.gitignore` global exclut `*.stl` ; un
+   `git add` d'un déplacement a silencieusement supprimé les fichiers ;
+   fix : `git add -f` + exceptions `.gitignore` (§21.7). Leçon : après toute
+   manipulation STL, `git ls-files ... | wc -l` (attendu 36).
+
+### 22.4 Phase 3 — La grande chasse à la fuite (« cellules extérieures non supprimées »)
+
+Symptôme : le maillage de l'instant 0 garde ~98 % du bloc de fond
+(4 M cellules, patch `background` rempli, tout connecté à l'extérieur).
+
+**Hypothèses géométriques testées (par mesures sur STL, parseur Python) :**
+1. ~~trou central de bougie dans HD_Wall~~ → **erratum** : le raster avait été
+   mal interprété ; preuve par calcul d'aire (disque − 4 puits, exact) ;
+   le « r=13,8 mm » était le bord interne des puits de soupapes (§21.9) ;
+2. tiges dépassant des conduits → **comportement normal** (design tcc3 :
+   volume au-dessus des colliers = extérieur, supprimé) — vérifié en
+   mesurant tcc3 lui-même, qui n'a pas de plafond au-dessus de ses soupapes ;
+3. ~~fente de 2 mm sous les murs de conduits~~ → **erratum** : les 88 arêtes
+   de bord des murs s'affrontent exactement aux sièges (r=12,5), qui sont
+   les pièces de jonction mur→culasse (correction utilisateur, §21.12bis) ;
+   la jupe ajoutée à tort a été supprimée ;
+4. colliers ValveCut coplanaires avec la culasse → d'abord surélevés +1 mm
+   (analogie tcc3), puis **repliés** : notre culasse est une plaque sans
+   épaisseur, les colliers se posent sur les bords des trous (§21.12bis) ;
+5. soupapes échappement décalées façon tcc3 (−1 mm + initialPosition
+   0.001) → appliqué puis **annulé** (voir phase 5 : la cause était ailleurs).
+
+**Méthode décisive — bissection par insidePoints (§21.13)** : runs
+`DEBUG_MESH=1` avec un seul point (chambre / admission / échappement).
+Résultat : les 3 volumes maillent **proprement**, y compris ensemble !
+
+### 22.5 Phase 4 — La vraie cause du « échec maillage » : le sur-raffinement
+
+Le profil tcc3 (PN_Crevice niveau 7 + dynamicRefinement numberOfCells 3 sur
+les sièges + distanceRefinement) produisait des cellules de 0,125 mm à 6 µm,
+**capables de pénétrer les interstices constructifs** de la CAO (fente
+0,5 mm entre cônes soupape/siège ; jeu 0,4 mm bord de soupape/trou de
+culasse). À maille ≥1 mm, le snap ferme ces interstices ; plus fins, ils
+deviennent de vrais passages reliant chambre ↔ conduits ↔ extérieur → tout
+le bloc gardé. Profil v0 : Crevice 5, sièges 3, distanceRefinement et
+dynamicRefinement OFF (§21.13bis). **Leçon : le raffinement doit rester
+plus grossier que les jeux de la CAO, sinon snappy « voit » à travers.**
+
+### 22.6 Phase 5 — Le planning de remaillage à ~9000 instants (3 itérations)
+
+Après le fix maillage, `predictRemeshInstants` produisait **9023** instants
+(attendu ~40-80) — rafale dense sur les rampes de soupapes (EVO ≈ 109-119°,
+espacement ~0,28°).
+
+1. **Théorie initialPosition** : le décalage EV (0.001) semblait annuler le
+   dénominateur du critère relatif (`lift − initialPosition + clearance`) ;
+   fix : revert EV (initialPosition 0). **Résultat : strictement aucun
+   changement** (9023 identiques) → théorie réfutée, mais revert conservé
+   (simplification) ;
+2. **Théorie clearance** : `clearance = minLift = 0.0005` donnait un seuil
+   relatif sub-mm près de la fermeture ; fix : clearance 0.005. **Résultat :
+   9016** — à peine mieux → le critère de déplacement n'était pas le
+   coupable dominant ;
+3. **La vraie cause — unités du CSV** : `exhaustLift.txt` est en
+   **millimètres** (max 8,89 mm) et tcc3 l'enveloppe d'un `scale 0.001`
+   (mm→m). Notre bloc `motion` EV avait **omis le scale** → levée lue en
+   MÈTRES (1000× trop grande). Preuves convergentes : les racines
+   `forcedPos` tombaient à 110,5° = angle où le **CSV brut** vaut 0,0005
+   (au lieu de 0,5 mm ≈ 133°) ; insensibilité aux correctifs 1 et 2 ;
+   et `moveSurfaces` aurait descendu les soupapes de centimètres aux
+   instants > 119°. Fix : enveloppe `scale 0.001` + `repeat` imbriqué
+   (§21.14ter). **Planning retombé à ~40-80 instants.**
+
+**Leçons de la phase 5** : (1) vérifier les unités de chaque CSV avant de
+le référencer ; (2) un planning démesuré doit faire suspecter une échelle
+de mouvement erronée AVANT les tolérances ; (3) un test « négatif »
+(correction sans effet) est une information précieuse : il élimine une
+hypothèse et oriente la suivante.
+
+### 22.7 Synthèse des leçons méthodologiques
+
+1. **Mesurer avant de corriger** : chaque hypothèse de fuite a été validée
+   (ou réfutée) par mesure d'affrontement (arêtes de bord, rayons, aires) —
+   deux errata auraient été évités par le calcul d'aire dès le départ ;
+2. **Bissecter** : le mode DEBUG_MESH + insidePoints un à un a isolé les
+   sous-systèmes en 3 runs de quelques minutes ;
+3. **Comparer au modèle champ par champ** : le bug du `scale` aurait sauté
+   aux yeux en différenciant nos blocs EV avec ceux de tcc3 (l'enveloppe
+   Function1 manque) ;
+4. **Chercher les signatures numériques** : les racines forcedPos à 110,5°
+   étaient la signature du facteur 1000 (0,0005 brut au lieu de 0,0005 m) ;
+5. **Un paramètre absurde en amont écrase tout en aval** : une levée 1000×
+   trop grande rend les tolérances de remaillage inopérantes — corriger
+   les tolérances avant l'échelle est une perte de temps ;
+6. **Documenter même les erreurs** : chaque erratum (§21.9, §21.12bis,
+   §21.14bis) est conservé — c'est ce qui a permis de ne pas refaire les
+   mêmes déductions.
+
+### 22.8 État final (v0) et dette technique connue
+
+| Élément | État |
+|---|---|
+| Géométrie (36 STL) | ✅ validée, étanche, affrontements mesurés |
+| engineDict (4 soupapes) | ✅ profil v0 (raffinements modérés), `scale 0.001` sur EV |
+| Planning remaillage | ✅ ~40-80 instants |
+| Maillage instant 0 | ✅ 3 volumes propres (bissection validée) |
+| Maillages complets | ⏳ en cours de génération au moment de l'écriture |
+| dynamicRefinement / distanceRefinement | désactivés en v0 — à réévaluer en v1 (avec numberOfCells ≤ 2 et vérification des instants minLift) |
+| Instants critiques (ouvertures/fermetures) | à contrôler par checkMesh après génération |
+| Combustion | hors périmètre v0 (motored, tracer passif) |
+| Données expérimentales tcc3 (chamberPressure) | inutilisables (moteur différent) — à remplacer/supprimer des scripts de comparaison |
+
+### 22.9 Le crevice marginal : 99 régions à 33,79° (crash meshToMesh)
+
+Premier run : crash au premier remaillage (33,79°) — `cellsToCellsStabilisation`,
+cellule non connectée à r=49,04 mm (= l'anneau du crevice). Diagnostic (via
+mini-case checkMesh avec lien symbolique vers le polyMesh) : le maillage 33.79
+compte **99 régions** (3 volumes sains + ~96 îlots) alors que l'instant 0 en
+avait 3. Cause : le gap du crevice (1 mm) est marginal face aux cellules
+(0,5–1 mm) — selon l'alignement géométrie/octree (qui change avec la
+translation du piston), snappy le traverse proprement (t=0) ou le fragmente
+en îlots (33.79). Non déterministe d'un instant à l'autre → ingérable.
+
+Correctif v0 : réduction radiale de l'anneau (× 0,998 → r ∈ [48,9 ; 49,9]) :
+gap de 0,1 mm vers la chemise, sous la taille de toute cellule → fermé par
+le snap à TOUS les instants → déterministe. Le crevice (poche de blow-by)
+sort du domaine fluide en v0 — physique acceptable pour l'aérologie.
+
+Règle générale : toute fente/gap fluide doit être ≥ 3-4 cellules locales
+pour être maillé de façon déterministe ; sinon, le fermer (sous 1 cellule)
+ou l'élargir (CAO). Entre les deux : zone de non-déterminisme.
+
+### 22.10 Comparaison crevice tcc3 vs PIengine_v0 — décision raffinement
+
+| | tcc3 | PIengine_v0 |
+|---|---|---|
+| Gap radial | 0,3 mm (bande conique scellée en bas) | 1,0 mm (anneau, ouvert en haut) |
+| Raffinement | L7 → 0,125 mm/cellule | L5 → 0,5 mm (2 cellules : marginal) |
+| Cellules à travers | 2,4 | 2 ← fragmentation à 33,79° |
+
+Leçon : le paramètre décisif n'est pas la largeur absolue du gap mais le
+**ratio gap/taille de cellule** (≥3 pour un maillage déterministe).
+Décision : conserver le crevice physique (anneau r[49,50] restauré) et
+raffiner à **L6** (0,25 mm → 4 cellules à travers). Risques à surveiller :
+volume de cellules accru par instant (~200 k dans l'annulus + coquilles),
+qualité de la déformation du mover sur ces petites cellules entre remaillages
+(tcc3 le fait à stroke*0.05 de `travelInterval` et L7 sur 256 cœurs).
+Validation : `Number of regions: 3` attendu à chaque instant critique.
+
+### 22.11 La fente de siège à l'ouverture : crash patchToPatch à 153,65°
+
+Après validation du crevice (6 remaillages passés en vol), crash au 7e
+(153,65°) : `patchToPatchStabilisation`, patch `exhaustPort`, face à
+r=14,9 mm (bord du siège EV). Mécanisme : à l'ouverture, la fente
+soupape-siège grandit de sous-cellule (0,5 mm < cellule L3 = 2 mm :
+scellée par le snap dans l'ancien maillage) à intercellulaire (~1 mm :
+ouverte dans le nouveau) → les faces de patch ne se superposent plus
+entre maillages successifs → mapping fatal. Même famille que le crevice
+(§22.9) : géométrie marginale vs cellule, ici à la transition ouverte/fermée.
+
+Fix : **réactivation du `dynamicRefinement numberOfCells 3`** sur les 4
+sièges — le mécanisme tcc3 conçu pour ça (à chaque remaillage, la taille
+locale vise 3 cellules à travers la fente, quelle que soit sa largeur).
+Coupé pendant le débogage car suspecté de la tempête de raffinement, il
+est désormais sûr : cette tempête venait du bug scale EV (levée 1000×),
+pas de ce mécanisme. Sièges remontés à L4 (valeur tcc3).
+
+### 22.12 La fuite de 136° : fentes constructives + L7, et la révision CAO v2
+
+Diagnostic confirmé par bissection (0 → 3 régions ✓ ; 136 → 2 régions dont
+l'extérieur fusionné) : le raffinement L7 du `dynamicRefinement` résolvait
+les fentes CONSTRUCTIVES de l'ancien siège (coin entre cônes d'angles
+différents 0–0,5 mm ; fente collerette/trou ~0,5 mm sur plaque sans
+épaisseur), reliant le fluide à l'extérieur. tcc3 survit au même mécanisme
+grâce à sa culasse ÉPAISSE (0,6 mm) qui emprisonne les interstices —
+mesuré : les cônes tcc3 sont AUSSI désassortis (41,6° vs 29,7/48/56°).
+
+Révision CAO v2 (utilisateur) : plaque 0,4 mm, cônes 45° appariés,
+disque affleurant, colliers traversants — voir journal. Points de vigilance :
+cônes confondus à la fermeture (dégénéré snappy) ; valider t=0 (3 régions)
+et 136 (2 régions SANS extérieur : background=0 face, volume cohérent).
+
+### 22.13 La fenêtre L7 : preuve expérimentale du mécanisme de fuite
+
+Bissection fine par l'utilisateur (instants 135→141) : fuite UNIQUEMENT sur
+136–140°, c'est-à-dire exactement la bande où numberOfCells 3 impose L7
+(cellules 0,125 mm : 3×0,125=0,375 < fente 0,5–0,72 mm < 3×0,25=0,75).
+Dès que la fente dépasse 0,75 mm (139–141°), le niveau retombe à L6
+(0,25 mm) et le maillage redevient étanche — l'interstice marginal de la
+zone de siège (~0,1–0,2 mm) est traversable à L7, scellé à L6.
+
+Fix : numberOfCells 2 → toute la fenêtre d'ouverture à L6. Le prix : la
+fente au minLift est résolue à 2 cellules au lieu de 3 ( acceptable en v0 ;
+pour restaurer 3 cellules proprement, voir l'enceinte de siège en CAO,
+backlog v1). Conventions combinées : offset tcc3 0,1 mm (fente réelle
+0,6 mm à minLift) + numberOfCells 2 → 2×0,25 ≤ 0,6 → L6 dès l'ouverture.

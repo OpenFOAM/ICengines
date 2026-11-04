@@ -1,0 +1,81 @@
+
+piston
+type            translationMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) 0.0754154;
+
+liner
+type            scalingMotion;
+
+iv1_stem
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0;
+isOpen          false;
+
+iv1_head
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0;
+isOpen          false;
+
+iv2_stem
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0;
+isOpen          false;
+
+iv2_head
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0;
+isOpen          false;
+
+ev1_stem
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0.0004488;
+isOpen          false;
+
+ev1_head
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0.0004488;
+isOpen          false;
+
+ev2_stem
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0.0004488;
+isOpen          false;
+
+ev2_head
+type            valveMotion;
+axis            (0 0 1);
+initialPosition 0;
+displacement(t) -0;
+minLift         0.0005;
+lift(t)         0.0004488;
+isOpen          false;

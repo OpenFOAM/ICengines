@@ -69,6 +69,11 @@ postProcessing/
 
 # STL surface files
 *.stl
+# ... except PIengine_v0 case geometry (uploaded by user, needed to run)
+!tutorials/PIengine_v0/constant/geometry/*.stl
+!tutorials/PIengine_v0/constant/geometry/supportSurfaces/*.stl
+!tutorials/PIengine_v1/constant/geometry/*.stl
+!tutorials/PIengine_v1/constant/geometry/supportSurfaces/*.stl
 
 # meshes and 0 folder
 meshes/

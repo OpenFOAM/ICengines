@@ -1,0 +1,119 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  14
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 14-a4867fc914c1
+Exec   : checkMesh
+Date   : Nov 04 2026
+Time   : 12:49:21
+Host   : "Ubuntu-PANCIN"
+PID    : 19952
+I/O    : collated (maxThreadFileBufferSize 2e+09)
+         Threading activated since maxThreadFileBufferSize > 0.
+         Requires large enough buffer to collect all data or thread support 
+         enabled in MPI. If thread support cannot be enabled, deactivate
+         threading by setting maxThreadFileBufferSize to 0 in
+         $FOAM_ETC/configDict
+Case   : /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136
+nProcs : 1
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStamp (fileModificationSkew 10)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+
+Selecting userTime engine
+--> FOAM Warning: 
+    From function static Foam::instantList Foam::timeSelector::select0(Foam::Time&, const Foam::argList&)
+    in file db/Time/timeSelector.C at line 269
+    No time specified or available, selecting 'constant'
+Create mesh for time = constant
+
+Time = constant
+
+Mesh stats
+    points:           1767806
+    faces:            4575766
+    internal faces:   4162186
+    cells:            1427826
+    faces per cell:   6.11976
+    boundary patches: 16
+    point zones:      0
+    face zones:       0
+    cell zones:       0
+
+Overall number of cells of each type:
+    hexahedra:     1111222
+    prisms:        119218
+    wedges:        0
+    pyramids:      0
+    tet wedges:    2059
+    tetrahedra:    20
+    polyhedra:     195307
+    Breakdown of polyhedra by number of faces:
+        faces   number of cells
+            4   36611
+            5   27752
+            6   45146
+            7   1653
+            8   1512
+            9   45650
+           10   300
+           11   161
+           12   25893
+           13   62
+           14   144
+           15   10102
+           18   321
+
+Checking topology...
+    Boundary definition OK.
+    Cell to face addressing OK.
+    Point usage OK.
+    Upper triangular ordering OK.
+    Face vertices OK.
+   *Number of regions: 2
+    The mesh has multiple regions which are not connected by any face.
+
+Checking patch topology for multiply connected surfaces...
+                   Patch    Faces   Points                  Surface topology
+              background    13389    14260  ok (non-closed singly connected)
+            cylinderhead    22912    29257  ok (non-closed singly connected)
+                ev1_head    41110    52599  ok (non-closed singly connected)
+                ev1_stem      542      580  ok (non-closed singly connected)
+                ev2_head    41156    52666  ok (non-closed singly connected)
+                ev2_stem      541      580  ok (non-closed singly connected)
+             exhaustPort    51486    68972  ok (non-closed singly connected)
+                   inlet      246      262  ok (non-closed singly connected)
+              intakePort     2916     3687  ok (non-closed singly connected)
+                iv1_head     2038     2357  ok (non-closed singly connected)
+                iv1_stem      536      584  ok (non-closed singly connected)
+                iv2_head     2042     2365  ok (non-closed singly connected)
+                iv2_stem      538      590  ok (non-closed singly connected)
+                   liner    27475    30841  ok (non-closed singly connected)
+                  outlet      885      991  ok (non-closed singly connected)
+                  piston   205768   210388  ok (non-closed singly connected)
+
+Checking geometry...
+    Overall domain bounding box (-0.0639259 -0.0639285 -0.112211) (0.0639261 0.0646626 0.0799742)
+    Mesh has 3 geometric (non-empty/wedge) directions (1 1 1)
+    Mesh has 3 solution (non-empty) directions (1 1 1)
+    Max cell openness = 5.15241e-16 OK.
+    Max aspect ratio = 10.0844 OK.
+    Minimum face area = 3.69199e-10. Maximum face area = 0.000257534.  Face area magnitudes OK.
+    Min volume = 1.18717e-13. Max volume = 4.12022e-06.  Total volume = 0.00309096.  Cell volumes OK.
+    Mesh non-orthogonality Max: 64.9961 average: 10.907
+    Non-orthogonality check OK.
+    Face pyramids OK.
+    Max skewness = 3.99965 OK.
+    Coupled point location match (average 0) OK.
+
+Mesh OK.
+
+End
+

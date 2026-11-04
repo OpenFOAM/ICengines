@@ -1,0 +1,315 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  14
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 14-a4867fc914c1
+Exec   : decomposePar -region main
+Date   : Nov 04 2026
+Time   : 12:47:45
+Host   : "Ubuntu-PANCIN"
+PID    : 18994
+I/O    : collated (maxThreadFileBufferSize 2e+09)
+         Threading activated since maxThreadFileBufferSize > 0.
+         Requires large enough buffer to collect all data or thread support 
+         enabled in MPI. If thread support cannot be enabled, deactivate
+         threading by setting maxThreadFileBufferSize to 0 in
+         $FOAM_ETC/configDict
+Case   : /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136
+nProcs : 1
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStamp (fileModificationSkew 10)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+
+Selecting userTime engine
+Creating new library in "dynamicCode/_7fdaab318acc25a51ea3c6db79cf486a94b512c1/platforms/linux64GccDPInt32Opt/lib/libcodeStream_7fdaab318acc25a51ea3c6db79cf486a94b512c1.so"
+    Copying "/opt/openfoam14/etc/codeTemplates/dynamicCode/codeStreamTemplate.C" to "/home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_7fdaab318acc25a51ea3c6db79cf486a94b512c1/codeStreamTemplate.C"
+wmake libso /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_7fdaab318acc25a51ea3c6db79cf486a94b512c1
+    ln: ./lnInclude
+    wmkdep: codeStreamTemplate.C
+    Ctoo: codeStreamTemplate.C
+    ld: /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_7fdaab318acc25a51ea3c6db79cf486a94b512c1/../platforms/linux64GccDPInt32Opt/lib/libcodeStream_7fdaab318acc25a51ea3c6db79cf486a94b512c1.so
+Creating new library in "dynamicCode/_74d923bf308b9d6b340af33a40317721a452ef01/platforms/linux64GccDPInt32Opt/lib/libcodeStream_74d923bf308b9d6b340af33a40317721a452ef01.so"
+    Copying "/opt/openfoam14/etc/codeTemplates/dynamicCode/codeStreamTemplate.C" to "/home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_74d923bf308b9d6b340af33a40317721a452ef01/codeStreamTemplate.C"
+wmake libso /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_74d923bf308b9d6b340af33a40317721a452ef01
+    ln: ./lnInclude
+    wmkdep: codeStreamTemplate.C
+    Ctoo: codeStreamTemplate.C
+    ld: /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_74d923bf308b9d6b340af33a40317721a452ef01/../platforms/linux64GccDPInt32Opt/lib/libcodeStream_74d923bf308b9d6b340af33a40317721a452ef01.so
+Creating new library in "dynamicCode/_1ec5087af15a3f6a2569988ad764974e626eeceb/platforms/linux64GccDPInt32Opt/lib/libcodeStream_1ec5087af15a3f6a2569988ad764974e626eeceb.so"
+    Copying "/opt/openfoam14/etc/codeTemplates/dynamicCode/codeStreamTemplate.C" to "/home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_1ec5087af15a3f6a2569988ad764974e626eeceb/codeStreamTemplate.C"
+wmake libso /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_1ec5087af15a3f6a2569988ad764974e626eeceb
+    ln: ./lnInclude
+    wmkdep: codeStreamTemplate.C
+    Ctoo: codeStreamTemplate.C
+    ld: /home/adminsys/Bureau/ICenginesFOAM/tutorials/PIengine_v0/constant/meshes/136/dynamicCode/_1ec5087af15a3f6a2569988ad764974e626eeceb/../platforms/linux64GccDPInt32Opt/lib/libcodeStream_1ec5087af15a3f6a2569988ad764974e626eeceb.so
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+
+Selecting userTime engine
+Calculating distribution of cells
+
+
+Selecting decomposer scotch
+
+Finished decomposition in 0.002345 s
+
+Calculating original mesh data
+
+Distributing cells to processors
+
+Distributing faces to processors
+
+Distributing points to processors
+
+Constructing processor meshes
+
+Processor 0
+    Number of cells = 48
+    Number of faces shared with processor 1 = 20
+    Number of faces shared with processor 2 = 14
+    Number of faces shared with processor 3 = 4
+    Number of faces shared with processor 4 = 3
+    Number of faces shared with processor 6 = 9
+    Number of faces shared with processor 8 = 2
+    Number of faces shared with processor 12 = 10
+    Number of faces shared with processor 15 = 10
+    Number of processor patches = 8
+    Number of processor faces = 72
+    Number of boundary faces = 18
+
+Processor 1
+    Number of cells = 48
+    Number of faces shared with processor 0 = 20
+    Number of faces shared with processor 3 = 17
+    Number of faces shared with processor 6 = 17
+    Number of processor patches = 3
+    Number of processor faces = 54
+    Number of boundary faces = 40
+
+Processor 2
+    Number of cells = 48
+    Number of faces shared with processor 0 = 14
+    Number of faces shared with processor 3 = 15
+    Number of faces shared with processor 4 = 15
+    Number of faces shared with processor 8 = 19
+    Number of faces shared with processor 11 = 1
+    Number of faces shared with processor 15 = 2
+    Number of processor patches = 6
+    Number of processor faces = 66
+    Number of boundary faces = 30
+
+Processor 3
+    Number of cells = 48
+    Number of faces shared with processor 0 = 4
+    Number of faces shared with processor 1 = 17
+    Number of faces shared with processor 2 = 15
+    Number of faces shared with processor 4 = 1
+    Number of faces shared with processor 5 = 14
+    Number of faces shared with processor 6 = 6
+    Number of processor patches = 6
+    Number of processor faces = 57
+    Number of boundary faces = 39
+
+Processor 4
+    Number of cells = 48
+    Number of faces shared with processor 0 = 3
+    Number of faces shared with processor 2 = 15
+    Number of faces shared with processor 3 = 1
+    Number of faces shared with processor 5 = 17
+    Number of faces shared with processor 6 = 7
+    Number of faces shared with processor 7 = 7
+    Number of faces shared with processor 8 = 3
+    Number of faces shared with processor 11 = 16
+    Number of faces shared with processor 12 = 3
+    Number of processor patches = 9
+    Number of processor faces = 72
+    Number of boundary faces = 22
+
+Processor 5
+    Number of cells = 48
+    Number of faces shared with processor 3 = 14
+    Number of faces shared with processor 4 = 17
+    Number of faces shared with processor 6 = 3
+    Number of faces shared with processor 7 = 15
+    Number of processor patches = 4
+    Number of processor faces = 49
+    Number of boundary faces = 39
+
+Processor 6
+    Number of cells = 48
+    Number of faces shared with processor 0 = 9
+    Number of faces shared with processor 1 = 17
+    Number of faces shared with processor 3 = 6
+    Number of faces shared with processor 4 = 7
+    Number of faces shared with processor 5 = 3
+    Number of faces shared with processor 7 = 21
+    Number of faces shared with processor 8 = 1
+    Number of faces shared with processor 12 = 8
+    Number of processor patches = 8
+    Number of processor faces = 72
+    Number of boundary faces = 22
+
+Processor 7
+    Number of cells = 48
+    Number of faces shared with processor 4 = 7
+    Number of faces shared with processor 5 = 15
+    Number of faces shared with processor 6 = 21
+    Number of faces shared with processor 12 = 6
+    Number of processor patches = 4
+    Number of processor faces = 49
+    Number of boundary faces = 45
+
+Processor 8
+    Number of cells = 48
+    Number of faces shared with processor 0 = 2
+    Number of faces shared with processor 2 = 19
+    Number of faces shared with processor 4 = 3
+    Number of faces shared with processor 6 = 1
+    Number of faces shared with processor 9 = 18
+    Number of faces shared with processor 10 = 1
+    Number of faces shared with processor 11 = 15
+    Number of faces shared with processor 12 = 2
+    Number of faces shared with processor 14 = 1
+    Number of faces shared with processor 15 = 14
+    Number of processor patches = 10
+    Number of processor faces = 76
+    Number of boundary faces = 18
+
+Processor 9
+    Number of cells = 48
+    Number of faces shared with processor 8 = 18
+    Number of faces shared with processor 10 = 16
+    Number of faces shared with processor 14 = 16
+    Number of faces shared with processor 15 = 4
+    Number of processor patches = 4
+    Number of processor faces = 54
+    Number of boundary faces = 36
+
+Processor 10
+    Number of cells = 48
+    Number of faces shared with processor 8 = 1
+    Number of faces shared with processor 9 = 16
+    Number of faces shared with processor 11 = 18
+    Number of faces shared with processor 13 = 8
+    Number of faces shared with processor 14 = 2
+    Number of faces shared with processor 15 = 2
+    Number of processor patches = 6
+    Number of processor faces = 47
+    Number of boundary faces = 45
+
+Processor 11
+    Number of cells = 48
+    Number of faces shared with processor 2 = 1
+    Number of faces shared with processor 4 = 16
+    Number of faces shared with processor 8 = 15
+    Number of faces shared with processor 10 = 18
+    Number of faces shared with processor 12 = 6
+    Number of faces shared with processor 13 = 5
+    Number of faces shared with processor 15 = 2
+    Number of processor patches = 7
+    Number of processor faces = 63
+    Number of boundary faces = 25
+
+Processor 12
+    Number of cells = 48
+    Number of faces shared with processor 0 = 10
+    Number of faces shared with processor 4 = 3
+    Number of faces shared with processor 6 = 8
+    Number of faces shared with processor 7 = 6
+    Number of faces shared with processor 8 = 2
+    Number of faces shared with processor 11 = 6
+    Number of faces shared with processor 13 = 12
+    Number of faces shared with processor 15 = 16
+    Number of processor patches = 8
+    Number of processor faces = 63
+    Number of boundary faces = 27
+
+Processor 13
+    Number of cells = 48
+    Number of faces shared with processor 10 = 8
+    Number of faces shared with processor 11 = 5
+    Number of faces shared with processor 12 = 12
+    Number of faces shared with processor 14 = 6
+    Number of faces shared with processor 15 = 9
+    Number of processor patches = 5
+    Number of processor faces = 40
+    Number of boundary faces = 40
+
+Processor 14
+    Number of cells = 48
+    Number of faces shared with processor 8 = 1
+    Number of faces shared with processor 9 = 16
+    Number of faces shared with processor 10 = 2
+    Number of faces shared with processor 13 = 6
+    Number of faces shared with processor 15 = 21
+    Number of processor patches = 5
+    Number of processor faces = 46
+    Number of boundary faces = 44
+
+Processor 15
+    Number of cells = 48
+    Number of faces shared with processor 0 = 10
+    Number of faces shared with processor 2 = 2
+    Number of faces shared with processor 8 = 14
+    Number of faces shared with processor 9 = 4
+    Number of faces shared with processor 10 = 2
+    Number of faces shared with processor 11 = 2
+    Number of faces shared with processor 12 = 16
+    Number of faces shared with processor 13 = 9
+    Number of faces shared with processor 14 = 21
+    Number of processor patches = 9
+    Number of processor faces = 80
+    Number of boundary faces = 22
+
+Number of processor faces = 480
+Max number of cells = 48 (0% above average 48)
+Max number of processor patches = 10 (56.8627% above average 6.375)
+Max number of faces between processors = 80 (33.3333% above average 60)
+
+Time = 0CAD
+
+Decomposing FV fields
+
+    (no FV fields)
+
+Decomposing point fields
+
+    (no point fields)
+
+End
+

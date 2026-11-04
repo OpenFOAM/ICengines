@@ -1,0 +1,211 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  14
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      binary;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+16
+(
+    background
+    {
+        type            internal;
+        inGroups        List<word> 1(internal);
+        nFaces          13389;
+        startFace       4162186;
+    }
+    cylinderhead
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+staticWall
+wall
+)
+;
+        nFaces          22912;
+        startFace       4175575;
+    }
+    ev1_head
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          41110;
+        startFace       4198487;
+    }
+    ev1_stem
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          542;
+        startFace       4239597;
+    }
+    ev2_head
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          41156;
+        startFace       4240139;
+    }
+    ev2_stem
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          541;
+        startFace       4281295;
+    }
+    exhaustPort
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+staticWall
+wall
+)
+;
+        nFaces          51486;
+        startFace       4281836;
+    }
+    inlet
+    {
+        type            patch;
+        inGroups        List<word> 1(inlet);
+        nFaces          246;
+        startFace       4333322;
+    }
+    intakePort
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+staticWall
+wall
+)
+;
+        nFaces          2916;
+        startFace       4333568;
+    }
+    iv1_head
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          2038;
+        startFace       4336484;
+    }
+    iv1_stem
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          536;
+        startFace       4338522;
+    }
+    iv2_head
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          2042;
+        startFace       4339058;
+    }
+    iv2_stem
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          538;
+        startFace       4341100;
+    }
+    liner
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+staticWall
+wall
+)
+;
+        nFaces          27475;
+        startFace       4341638;
+    }
+    outlet
+    {
+        type            patch;
+        inGroups        List<word> 1(outlet);
+        nFaces          885;
+        startFace       4369113;
+    }
+    piston
+    {
+        type            wall;
+        inGroups        List<word> 
+2
+(
+movingWall
+wall
+)
+;
+        nFaces          205768;
+        startFace       4369998;
+    }
+)
+
+// ************************************************************************* //

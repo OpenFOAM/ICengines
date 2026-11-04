@@ -320,7 +320,7 @@ patches
         {
             type    valveMotion;             // mouvement de soupape (levée)
             axis    (0 0 1);                 // axe de la soupape (vertical)
-            minLift 0.0005;                  // levée minimale [m] (validé) — la
+            minLift 0.0006;                  // levée minimale [m] (validé) — la
                                               // soupape n'est JAMAIS modélisée
                                               // totalement fermée ; évite les
                                               // maillages dégénérés au contact
@@ -416,7 +416,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // (validé)
+            minLift 0.0006;                  // (validé)
             initialPosition 0.0001;   // convention tcc3 : CAO 0.1mm SOUS la fermee (admission).
 
             motion
@@ -488,7 +488,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // (validé)
+            minLift 0.0006;                  // (validé)
             initialPosition 0.0001;   // convention tcc3 : CAO 0.1mm SOUS la fermée (échappement)
 
             motion
@@ -580,7 +580,7 @@ patches
         {
             type    valveMotion;
             axis    (0 0 1);
-            minLift 0.0005;                  // (validé)
+            minLift 0.0006;                  // (validé)
             initialPosition 0.0001;   // convention tcc3 : CAO 0.1mm SOUS la fermée (échappement)
 
             motion

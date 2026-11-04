@@ -434,6 +434,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-04 | **Tous les STL** (révision CAO utilisateur) | **Nouvelle architecture du siège, façon tcc3** : plaque épaisse 0,4 mm (trous r=14,15) ; portées 45° (r 12→14) sur cônes de siège 45° (r 12,5→14,15) noyés dans l'épaisseur ; disques r=14,0 affleurant le plan bas de la plaque (fente radiale 0,15 mm de hauteur nulle à la fermeture) ; colliers r=14,5 ancrés À TRAVERS l'épaisseur (z −4,75→+0,25), restant encastrés jusqu'à ~4,8 mm de levée. Élimine toute fente constructive finie à la fermeture → le déclencheur du leak L7 disparaît. Piston/crevice/chemise inchangés (L6 valable). Vigilance : cônes portée/siège exactement confondus à la fermeture (cas dégénéré snappy — test, sinon presser de 0,05 mm) | Révision CAO après diagnostic « fuite 136 = fentes constructives résolues par L7 » (cf. §22.12) |
 | 2026-11-03 | `engineDict.{coarse,fine}` (v0+v1) | **Crash patchToPatch à 153,65° corrigé** : après 6 remaillages réussis (33,79→136,17 ✓ — le fix crevice tient !), crash au 7e sur `exhaustPort` (face à r=14,9 mm du siège EV, fente ~0,7–1 mm) : à la transition ouverte/fermée, la fente (sous-cellule à L3=2 mm) est scellée dans l'ancien maillage mais ouverte dans le nouveau → régions de patch non superposables. **Fix : `dynamicRefinement true; numberOfCells 3` réactivé sur les 4 sièges** (design tcc3 : 3 cellules à travers la fente à chaque remaillage) + sièges L4 — sûr désormais car la tempête de raffinement venait du bug scale EV, pas de ce mécanisme | 2e bug de géométrie marginale (cf. §22.11) |
 | 2026-11-03 | `PN_Crevice.stl` + `engineDict.{coarse,fine}` | **Décision utilisateur : garder le crevice → raffinement L6** (la réduction à 49,9 mm est ANNULÉE, anneau original r[49,50] restauré). Comparaison tcc3 : gap 0,3 mm @ L7 (0,125 mm) = 2,4 cellules à travers ; nous : gap 1 mm @ L5 = 2 cellules (marginal → fragmentation). Choix retenu : **L6 (0,25 mm) = 4 cellules à travers** — ratio meilleur que tcc3. Risques assumés : +cellules (~200 k dans l'anneau + coquilles de transition par instant), déformation mover des petites cellules entre remaillages | Décision utilisateur après comparaison tcc3 (cf. §22.10) |
 | 2026-11-03 | `PN_Crevice.stl` | **Crash meshToMesh à 33,79° diagnostiqué et corrigé** : le maillage de remaillage 33,79 avait **99 régions** (3 volumes sains + ~96 îlots) — l'anneau du crevice (gap 1 mm, marginal vs cellules 0,5–1 mm) s'y était fragmenté en slivers déconnectés, tuant le mapping (`cellsToCellsStabilisation`, cellule à r=49,04). Correctif v0 : **anneau réduit à r ∈ [48,9 ; 49,9]** (échelle radiale 0,998) → gap de 0,1 mm vers la chemise, systématiquement fermé par le snap à tous les instants → comportement déterministe, crevice exclu du domaine fluide en v0. V1 : gap ≥ 2 mm en CAO pour réintroduire le blow-by | Crash au 1er remaillage (cf. §22.9) |
@@ -1018,3 +1019,18 @@ locale vise 3 cellules à travers la fente, quelle que soit sa largeur).
 Coupé pendant le débogage car suspecté de la tempête de raffinement, il
 est désormais sûr : cette tempête venait du bug scale EV (levée 1000×),
 pas de ce mécanisme. Sièges remontés à L4 (valeur tcc3).
+
+### 22.12 La fuite de 136° : fentes constructives + L7, et la révision CAO v2
+
+Diagnostic confirmé par bissection (0 → 3 régions ✓ ; 136 → 2 régions dont
+l'extérieur fusionné) : le raffinement L7 du `dynamicRefinement` résolvait
+les fentes CONSTRUCTIVES de l'ancien siège (coin entre cônes d'angles
+différents 0–0,5 mm ; fente collerette/trou ~0,5 mm sur plaque sans
+épaisseur), reliant le fluide à l'extérieur. tcc3 survit au même mécanisme
+grâce à sa culasse ÉPAISSE (0,6 mm) qui emprisonne les interstices —
+mesuré : les cônes tcc3 sont AUSSI désassortis (41,6° vs 29,7/48/56°).
+
+Révision CAO v2 (utilisateur) : plaque 0,4 mm, cônes 45° appariés,
+disque affleurant, colliers traversants — voir journal. Points de vigilance :
+cônes confondus à la fermeture (dégénéré snappy) ; valider t=0 (3 régions)
+et 136 (2 régions SANS extérieur : background=0 face, volume cohérent).

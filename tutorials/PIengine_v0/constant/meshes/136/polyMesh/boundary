@@ -20,8 +20,8 @@ FoamFile
     {
         type            internal;
         inGroups        List<word> 1(internal);
-        nFaces          13389;
-        startFace       4162186;
+        nFaces          13398;
+        startFace       4146056;
     }
     cylinderhead
     {
@@ -33,8 +33,8 @@ staticWall
 wall
 )
 ;
-        nFaces          22912;
-        startFace       4175575;
+        nFaces          22931;
+        startFace       4159454;
     }
     ev1_head
     {
@@ -46,8 +46,8 @@ movingWall
 wall
 )
 ;
-        nFaces          41110;
-        startFace       4198487;
+        nFaces          41107;
+        startFace       4182385;
     }
     ev1_stem
     {
@@ -59,8 +59,8 @@ movingWall
 wall
 )
 ;
-        nFaces          542;
-        startFace       4239597;
+        nFaces          540;
+        startFace       4223492;
     }
     ev2_head
     {
@@ -72,8 +72,8 @@ movingWall
 wall
 )
 ;
-        nFaces          41156;
-        startFace       4240139;
+        nFaces          41150;
+        startFace       4224032;
     }
     ev2_stem
     {
@@ -85,8 +85,8 @@ movingWall
 wall
 )
 ;
-        nFaces          541;
-        startFace       4281295;
+        nFaces          543;
+        startFace       4265182;
     }
     exhaustPort
     {
@@ -98,15 +98,15 @@ staticWall
 wall
 )
 ;
-        nFaces          51486;
-        startFace       4281836;
+        nFaces          51500;
+        startFace       4265725;
     }
     inlet
     {
         type            patch;
         inGroups        List<word> 1(inlet);
-        nFaces          246;
-        startFace       4333322;
+        nFaces          202;
+        startFace       4317225;
     }
     intakePort
     {
@@ -118,8 +118,8 @@ staticWall
 wall
 )
 ;
-        nFaces          2916;
-        startFace       4333568;
+        nFaces          1525;
+        startFace       4317427;
     }
     iv1_head
     {
@@ -131,8 +131,8 @@ movingWall
 wall
 )
 ;
-        nFaces          2038;
-        startFace       4336484;
+        nFaces          1537;
+        startFace       4318952;
     }
     iv1_stem
     {
@@ -144,8 +144,8 @@ movingWall
 wall
 )
 ;
-        nFaces          536;
-        startFace       4338522;
+        nFaces          436;
+        startFace       4320489;
     }
     iv2_head
     {
@@ -157,8 +157,8 @@ movingWall
 wall
 )
 ;
-        nFaces          2042;
-        startFace       4339058;
+        nFaces          1541;
+        startFace       4320925;
     }
     iv2_stem
     {
@@ -170,8 +170,8 @@ movingWall
 wall
 )
 ;
-        nFaces          538;
-        startFace       4341100;
+        nFaces          436;
+        startFace       4322466;
     }
     liner
     {
@@ -183,15 +183,15 @@ staticWall
 wall
 )
 ;
-        nFaces          27475;
-        startFace       4341638;
+        nFaces          27487;
+        startFace       4322902;
     }
     outlet
     {
         type            patch;
         inGroups        List<word> 1(outlet);
-        nFaces          885;
-        startFace       4369113;
+        nFaces          884;
+        startFace       4350389;
     }
     piston
     {
@@ -203,8 +203,8 @@ movingWall
 wall
 )
 ;
-        nFaces          205768;
-        startFace       4369998;
+        nFaces          205730;
+        startFace       4351273;
     }
 )
 

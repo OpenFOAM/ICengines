@@ -8,9 +8,9 @@
 Build  : 14-a4867fc914c1
 Exec   : checkMesh
 Date   : Nov 04 2026
-Time   : 12:49:21
+Time   : 14:08:38
 Host   : "Ubuntu-PANCIN"
-PID    : 19952
+PID    : 30696
 I/O    : collated (maxThreadFileBufferSize 2e+09)
          Threading activated since maxThreadFileBufferSize > 0.
          Requires large enough buffer to collect all data or thread support 
@@ -37,39 +37,40 @@ Create mesh for time = constant
 Time = constant
 
 Mesh stats
-    points:           1767806
-    faces:            4575766
-    internal faces:   4162186
-    cells:            1427826
-    faces per cell:   6.11976
+    points:           1760299
+    faces:            4557003
+    internal faces:   4146056
+    cells:            1421992
+    faces per cell:   6.12033
     boundary patches: 16
     point zones:      0
     face zones:       0
     cell zones:       0
 
 Overall number of cells of each type:
-    hexahedra:     1111222
-    prisms:        119218
+    hexahedra:     1106887
+    prisms:        118666
     wedges:        0
     pyramids:      0
-    tet wedges:    2059
+    tet wedges:    2039
     tetrahedra:    20
-    polyhedra:     195307
+    polyhedra:     194380
     Breakdown of polyhedra by number of faces:
         faces   number of cells
-            4   36611
-            5   27752
-            6   45146
-            7   1653
-            8   1512
-            9   45650
-           10   300
-           11   161
-           12   25893
-           13   62
-           14   144
-           15   10102
-           18   321
+            4   36315
+            5   27531
+            6   45034
+            7   1633
+            8   1496
+            9   45498
+           10   295
+           11   152
+           12   25850
+           13   64
+           14   142
+           15   10043
+           16   1
+           18   326
 
 Checking topology...
     Boundary definition OK.
@@ -77,43 +78,42 @@ Checking topology...
     Point usage OK.
     Upper triangular ordering OK.
     Face vertices OK.
-   *Number of regions: 2
-    The mesh has multiple regions which are not connected by any face.
+    Number of regions: 1 (OK).
 
 Checking patch topology for multiply connected surfaces...
                    Patch    Faces   Points                  Surface topology
-              background    13389    14260  ok (non-closed singly connected)
-            cylinderhead    22912    29257  ok (non-closed singly connected)
-                ev1_head    41110    52599  ok (non-closed singly connected)
-                ev1_stem      542      580  ok (non-closed singly connected)
-                ev2_head    41156    52666  ok (non-closed singly connected)
-                ev2_stem      541      580  ok (non-closed singly connected)
-             exhaustPort    51486    68972  ok (non-closed singly connected)
-                   inlet      246      262  ok (non-closed singly connected)
-              intakePort     2916     3687  ok (non-closed singly connected)
-                iv1_head     2038     2357  ok (non-closed singly connected)
-                iv1_stem      536      584  ok (non-closed singly connected)
-                iv2_head     2042     2365  ok (non-closed singly connected)
-                iv2_stem      538      590  ok (non-closed singly connected)
-                   liner    27475    30841  ok (non-closed singly connected)
-                  outlet      885      991  ok (non-closed singly connected)
-                  piston   205768   210388  ok (non-closed singly connected)
+              background    13398    14269  ok (non-closed singly connected)
+            cylinderhead    22931    29289  ok (non-closed singly connected)
+                ev1_head    41107    52596  ok (non-closed singly connected)
+                ev1_stem      540      578  ok (non-closed singly connected)
+                ev2_head    41150    52660  ok (non-closed singly connected)
+                ev2_stem      543      582  ok (non-closed singly connected)
+             exhaustPort    51500    68986  ok (non-closed singly connected)
+                   inlet      202      214  ok (non-closed singly connected)
+              intakePort     1525     1941  ok (non-closed singly connected)
+                iv1_head     1537     1735  ok (non-closed singly connected)
+                iv1_stem      436      461  ok (non-closed singly connected)
+                iv2_head     1541     1743  ok (non-closed singly connected)
+                iv2_stem      436      465  ok (non-closed singly connected)
+                   liner    27487    30855  ok (non-closed singly connected)
+                  outlet      884      989  ok (non-closed singly connected)
+                  piston   205730   210358  ok (non-closed singly connected)
 
 Checking geometry...
-    Overall domain bounding box (-0.0639259 -0.0639285 -0.112211) (0.0639261 0.0646626 0.0799742)
+    Overall domain bounding box (-0.0639256 -0.0639289 -0.112212) (0.0639261 0.064653 0.0799745)
     Mesh has 3 geometric (non-empty/wedge) directions (1 1 1)
     Mesh has 3 solution (non-empty) directions (1 1 1)
-    Max cell openness = 5.15241e-16 OK.
-    Max aspect ratio = 10.0844 OK.
-    Minimum face area = 3.69199e-10. Maximum face area = 0.000257534.  Face area magnitudes OK.
-    Min volume = 1.18717e-13. Max volume = 4.12022e-06.  Total volume = 0.00309096.  Cell volumes OK.
-    Mesh non-orthogonality Max: 64.9961 average: 10.907
+    Max cell openness = 4.26932e-16 OK.
+    Max aspect ratio = 9.63939 OK.
+    Minimum face area = 3.69199e-10. Maximum face area = 0.000257537.  Face area magnitudes OK.
+    Min volume = 1.36138e-13. Max volume = 4.1177e-06.  Total volume = 0.00304583.  Cell volumes OK.
+    Mesh non-orthogonality Max: 64.9984 average: 10.9262
     Non-orthogonality check OK.
-    Face pyramids OK.
-    Max skewness = 3.99965 OK.
+ ***Error in face pyramids: 1 faces are incorrectly oriented.
+    Max skewness = 3.99914 OK.
     Coupled point location match (average 0) OK.
 
-Mesh OK.
+Failed 1 mesh checks.
 
 End
 

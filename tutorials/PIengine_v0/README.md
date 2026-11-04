@@ -434,6 +434,7 @@ fichiers, les dictionnaires référencent donc `IV_1_Steam`) :
 | 2026-10-22 | `engineDict.{coarse,fine}` | `insidePoints` repositionnés : conduits (0 ±0.045 0.03) — points initiaux (±0.031) trop proches des puits de soupapes (risque de rib central entre sièges) ; point chambre inchangé (0 0 -0.013) | Robustesse snappy (§21.3) |
 | 2026-10-22 | `README.md` | Ajout §21 : notes de validation (clearance, chemise scaling, insidePoints, affrontement soupape-siège) | Consignation des remarques de la session |
 | 2026-11-03 | `constant/geometry/HD_Wall.stl` | **Correction d'analyse** : le « trou central » annoncé n'existait PAS — le fichier n'a que les 4 trous de soupapes (l'aire des triangles = disque − 4 puits, exactement ; r=13,8 mm = bord interne des puits, pas d'un 5ᵉ trou). Fichier utilisateur validé ✓ | Erreur d'interprétation du raster (cf. §21.9) |
+| 2026-11-04 | `engineDict.{coarse,fine}` | **Fenêtre de fuite 136–140° identifiée et corrigée** : bissection expérimentale utilisateur (135 OK / 136–140 fusionnés / 141 OK) = exactement la bande où `dynamicRefinement numberOfCells 3` impose du **L7** (0,125 mm — fente 0,5–0,72 mm < 3×0,25) ; à 139°+ la fente dépasse 0,75 mm → L6 → étanche. Le L7 « voit à travers » l'interstice marginal de la zone de siège ; L6 le scelle. **Fix : `numberOfCells 3 → 2`** (fente 0,6 mm à minLift → 2×0,25 ≤ 0,6 → L6 partout, plus aucun L7 du cycle). La fente à l'ouverture est résolue à 2 cellules au lieu de 3 (v0 acceptable) | Preuve expérimentale du mécanisme L7 (cf. §22.13) |
 | 2026-11-04 | STL EV (×10) + `engineDict.{coarse,fine}` | **Convention tcc3 étendue à l'échappement** (décision utilisateur) : pièces EV translatées de −0,1 mm, `initialPosition 0.0001` dans `ev1_stem`/`ev2_stem` — les **4 soupapes** sont désormais en CAO 0,1 mm sous la position fermée. À la fermeture : cônes écartés de 0,1 mm (sous-cellule → scellé par snap), plus aucune surface confondue ; à l'ouverture : la fente réelle grandit de 0,1 mm (0,6 mm à minLift) → dynamicRefinement vise L6 au lieu de L7. Garde-fous : minLift 0,5>0,1 ✓, clearance 0,005>>0,0001 ✓, isOpen indépendant ✓ | Décision utilisateur (convention tcc3 généralisée) |
 | 2026-11-04 | STL IV (×10) + `engineDict.{coarse,fine}` | **Convention tcc3 appliquée à l'admission** (décision utilisateur) : pièces IV translatées de **−0,1 mm** (CAO sous la position fermée), `initialPosition 0.0001` dans `iv1_stem`/`iv2_stem` → à lift=0, déplacement = −0,0001 : la soupape remonte de 0,1 mm → position fermée géométrique inchangée. Supprime la coïncidence exacte des cônes IV à la fermeture (gap CAO 0,1 mm < cellule L4 = scellé par snap). Sécurités vérifiées : minLift 0,5 > 0,1 ✓ ; clearance 0,005 >> 0,0001 (pas de piège §21.14) ✓ ; isOpen indépendant d'initialPosition ✓ | Décision utilisateur (convention tcc3 étendue à l'admission) |
 | 2026-11-04 | **Tous les STL** (révision CAO utilisateur) | **Nouvelle architecture du siège, façon tcc3** : plaque épaisse 0,4 mm (trous r=14,15) ; portées 45° (r 12→14) sur cônes de siège 45° (r 12,5→14,15) noyés dans l'épaisseur ; disques r=14,0 affleurant le plan bas de la plaque (fente radiale 0,15 mm de hauteur nulle à la fermeture) ; colliers r=14,5 ancrés À TRAVERS l'épaisseur (z −4,75→+0,25), restant encastrés jusqu'à ~4,8 mm de levée. Élimine toute fente constructive finie à la fermeture → le déclencheur du leak L7 disparaît. Piston/crevice/chemise inchangés (L6 valable). Vigilance : cônes portée/siège exactement confondus à la fermeture (cas dégénéré snappy — test, sinon presser de 0,05 mm) | Révision CAO après diagnostic « fuite 136 = fentes constructives résolues par L7 » (cf. §22.12) |
@@ -1036,3 +1037,18 @@ Révision CAO v2 (utilisateur) : plaque 0,4 mm, cônes 45° appariés,
 disque affleurant, colliers traversants — voir journal. Points de vigilance :
 cônes confondus à la fermeture (dégénéré snappy) ; valider t=0 (3 régions)
 et 136 (2 régions SANS extérieur : background=0 face, volume cohérent).
+
+### 22.13 La fenêtre L7 : preuve expérimentale du mécanisme de fuite
+
+Bissection fine par l'utilisateur (instants 135→141) : fuite UNIQUEMENT sur
+136–140°, c'est-à-dire exactement la bande où numberOfCells 3 impose L7
+(cellules 0,125 mm : 3×0,125=0,375 < fente 0,5–0,72 mm < 3×0,25=0,75).
+Dès que la fente dépasse 0,75 mm (139–141°), le niveau retombe à L6
+(0,25 mm) et le maillage redevient étanche — l'interstice marginal de la
+zone de siège (~0,1–0,2 mm) est traversable à L7, scellé à L6.
+
+Fix : numberOfCells 2 → toute la fenêtre d'ouverture à L6. Le prix : la
+fente au minLift est résolue à 2 cellules au lieu de 3 ( acceptable en v0 ;
+pour restaurer 3 cellules proprement, voir l'enceinte de siège en CAO,
+backlog v1). Conventions combinées : offset tcc3 0,1 mm (fente réelle
+0,6 mm à minLift) + numberOfCells 2 → 2×0,25 ≤ 0,6 → L6 dès l'ouverture.

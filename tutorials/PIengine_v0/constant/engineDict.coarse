@@ -390,8 +390,7 @@ patches
                                         // scellée dans l'ancien maillage, ouverte dans le nouveau)
                                         // Sûr désormais : la tempête de raffinement venait du bug
                                         // scale EV (levée 1000x), pas de ce mécanisme
-                    numberOfCells       3;        // remaillage : 3 cellules À TRAVERS
-                                                // la fente soupape-siège
+                    numberOfCells       2;        // 2 cellules à travers la fente (3→L7 à l'ouverture = fenêtre qui fuit 136-140 ; 2→L6=0.25mm, scellé)
                 }
             }
         }
@@ -464,7 +463,7 @@ patches
                 IV_2_Seat
                 {
                     dynamicRefinement   true;    // REACTIVÉ (design tcc3, cf. iv1_head)
-                    numberOfCells       3;
+                    numberOfCells       2;   // 2 cellules (3 causait du L7 à l'ouverture)
                 }
             }
         }
@@ -557,7 +556,7 @@ patches
                 EV_1_Seat
                 {
                     dynamicRefinement   true;    // REACTIVÉ (design tcc3, cf. iv1_head)
-                    numberOfCells       3;
+                    numberOfCells       2;   // 2 cellules (3 causait du L7 à l'ouverture)
                 }
             }
         }
@@ -628,7 +627,7 @@ patches
                 EV_2_Seat
                 {
                     dynamicRefinement   true;    // REACTIVÉ (design tcc3, cf. iv1_head)
-                    numberOfCells       3;
+                    numberOfCells       2;   // 2 cellules (3 causait du L7 à l'ouverture)
                 }
             }
         }

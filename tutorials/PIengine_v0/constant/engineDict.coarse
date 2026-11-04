@@ -26,7 +26,8 @@ FoamFile
 //   - GEOMETRIE PIengine_v0 (mesurée sur les STL fournis) :
 //       * alésage          : R = 0.05 m   (liner x,y dans [-0.05, 0.05])
 //       * face de culasse  : plan z = -0.005 m (HD_Wall)
-//       * soupapes CAO FERMEES (initialPosition 0 partout), axes verticaux (0 0 1)
+//       * soupapes : admission CAO 0.1mm sous la fermée (initialPosition 0.0001,
+//         convention tcc3) ; échappement CAO fermée (initialPosition 0)
 //       * admission  : IV_1 (x>0) et IV_2 (x<0), cote y < 0 ; bride y = -0.055
 //       * échappement: EV_1 (x>0) et EV_2 (x<0), cote y > 0 ; bride y = +0.055
 //
@@ -323,7 +324,7 @@ patches
                                               // soupape n'est JAMAIS modélisée
                                               // totalement fermée ; évite les
                                               // maillages dégénérés au contact
-            initialPosition 0;               // CAO soupape FERMÉE (mesuré : Bottom z=-0.0059)
+            initialPosition 0.0001;          // convention tcc3 : CAO 0.1mm SOUS la fermée (admission)
 
             motion
             {
@@ -417,7 +418,7 @@ patches
             type    valveMotion;
             axis    (0 0 1);
             minLift 0.0005;                  // (validé)
-            initialPosition 0;
+            initialPosition 0.0001;   // convention tcc3 : CAO 0.1mm SOUS la fermee (admission).
 
             motion
             {
